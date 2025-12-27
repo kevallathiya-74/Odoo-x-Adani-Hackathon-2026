@@ -102,7 +102,7 @@ class Equipment(Model):
             if existing:
                 # Make it unique
                 import random
-                vals['serial_no'] = f\"{vals['serial_no']}-{random.randint(1000, 9999)}\"
+                vals['serial_no'] = f"{vals['serial_no']}-{random.randint(1000, 9999)}"
                 # Calculate warranty end date if duration provided
         if 'warranty_start' in vals and 'warranty_duration' in vals:
             from dateutil.relativedelta import relativedelta

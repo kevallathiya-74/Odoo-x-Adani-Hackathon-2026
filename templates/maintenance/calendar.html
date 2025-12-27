@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}Maintenance Calendar - GearGuard{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-8">
+        <h2><i class="fas fa-calendar-alt"></i> Maintenance Schedule</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <button class="btn btn-primary" onclick="window.location.href='/maintenance/form'">
+            <i class="fas fa-plus"></i> New Request
+        </button>
+        <div class="btn-group ms-2">
+            <button class="btn btn-outline-secondary" id="filterAll">All</button>
+            <button class="btn btn-outline-warning" id="filterCorrective">Corrective</button>
+            <button class="btn btn-outline-success active" id="filterPreventive">Preventive</button>
+        </div>
+    </div>
+</div>
+
+<!-- Legend -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="calendar-legend">
+            <span class="legend-item">
+                <span class="legend-color" style="background: #28a745;"></span> Preventive
+            </span>
+            <span class="legend-item">
+                <span class="legend-color" style="background: #ffc107;"></span> Corrective
+            </span>
+            <span class="legend-item">
+                <span class="legend-color" style="background: #dc3545;"></span> Overdue
+            </span>
+            <span class="legend-item">
+                <span class="legend-color" style="background: #6c757d;"></span> Completed
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Calendar Container -->
+<div class="row">
+    <div class="col-12">
+        <div id="calendar"></div>
+    </div>
+</div>
+
+<!-- Event Details Modal -->
+<div class="modal fade" id="eventModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="eventModalTitle">Maintenance Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="eventModalBody">
+                <!-- Content loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btnEditEvent">Edit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+<style>
+    #calendar {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .calendar-legend {
+        display: flex;
+        gap: 20px;
+        padding: 10px;
+        background: white;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+    }
+    
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        display: inline-block;
+    }
+    
+    .fc-event {
+        cursor: pointer;
+        border-radius: 4px;
+        padding: 2px 4px;
+    }
+    
+    .fc-event:hover {
+        opacity: 0.8;
+    }
+    
+    .event-detail-row {
+        display: flex;
+        margin-bottom: 10px;
+    }
+    
+    .event-detail-label {
+        font-weight: bold;
+        width: 140px;
+        color: #495057;
+    }
+    
+    .event-detail-value {
+        flex: 1;
+        color: #212529;
+    }
+    
+    .priority-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .priority-0 { background: #d1ecf1; color: #0c5460; }
+    .priority-1 { background: #d4edda; color: #155724; }
+    .priority-2 { background: #fff3cd; color: #856404; }
+    .priority-3 { background: #f8d7da; color: #721c24; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<script>
+    let calendar;
+    let currentFilter = 'preventive';
+    let allEvents = [];
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const calendarEl = document.getElementById('calendar');
+        
+        calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,listWeek'
+            },
+            events: loadEvents,
+            eventClick: handleEventClick,
+            height: 'auto',
+            eventDisplay: 'block',
+            displayEventTime: false,
+            eventTimeFormat: {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            }
+        });
+        
+        calendar.render();
+        
+        // Filter buttons
+        $('#filterAll').click(() => setFilter('all'));
+        $('#filterCorrective').click(() => setFilter('corrective'));
+        $('#filterPreventive').click(() => setFilter('preventive'));
+    });
+    
+    function loadEvents(info, successCallback, failureCallback) {
+        $.ajax({
+            url: '/api/maintenance/calendar',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    allEvents = response.data;
+                    const filteredEvents = filterEvents(allEvents);
+                    successCallback(filteredEvents);
+                }
+            },
+            error: function() {
+                showToast('Error loading calendar events', 'error');
+                failureCallback();
+            }
+        });
+    }
+    
+    function filterEvents(events) {
+        if (currentFilter === 'all') {
+            return events;
+        }
+        return events.filter(e => e.extendedProps.maintenance_type === currentFilter);
+    }
+    
+    function setFilter(filter) {
+        currentFilter = filter;
+        
+        // Update button states
+        $('.btn-group button').removeClass('active');
+        $(`#filter${filter.charAt(0).toUpperCase() + filter.slice(1)}`).addClass('active');
+        
+        // Reload events
+        calendar.refetchEvents();
+    }
+    
+    function handleEventClick(info) {
+        const event = info.event;
+        const props = event.extendedProps;
+        
+        const priorityLabels = {
+            '0': 'Low', '1': 'Normal', '2': 'High', '3': 'Critical'
+        };
+        
+        const stateLabels = {
+            'new': '<span class="badge bg-info">New</span>',
+            'in_progress': '<span class="badge bg-warning">In Progress</span>',
+            'done': '<span class="badge bg-success">Done</span>',
+            'cancelled': '<span class="badge bg-secondary">Cancelled</span>'
+        };
+        
+        const modalBody = `
+            <div class="event-detail-row">
+                <div class="event-detail-label">Reference:</div>
+                <div class="event-detail-value"><strong>${event.title}</strong></div>
+            </div>
+            <div class="event-detail-row">
+                <div class="event-detail-label">Equipment:</div>
+                <div class="event-detail-value">${props.equipment || 'N/A'}</div>
+            </div>
+            <div class="event-detail-row">
+                <div class="event-detail-label">Location:</div>
+                <div class="event-detail-value">${props.location || 'N/A'}</div>
+            </div>
+            <div class="event-detail-row">
+                <div class="event-detail-label">Type:</div>
+                <div class="event-detail-value">
+                    <span class="badge ${props.maintenance_type === 'preventive' ? 'bg-success' : 'bg-warning'}">
+                        ${props.maintenance_type === 'preventive' ? 'Preventive' : 'Corrective'}
+                    </span>
+                </div>
+            </div>
+            <div class="event-detail-row">
+                <div class="event-detail-label">Priority:</div>
+                <div class="event-detail-value">
+                    <span class="priority-badge priority-${props.priority || '1'}">
+                        ${priorityLabels[props.priority] || 'Normal'}
+                    </span>
+                </div>
+            </div>
+            <div class="event-detail-row">
+                <div class="event-detail-label">Status:</div>
+                <div class="event-detail-value">${stateLabels[props.state] || 'Unknown'}</div>
+            </div>
+            <div class="event-detail-row">
+                <div class="event-detail-label">Technician:</div>
+                <div class="event-detail-value">${props.technician || 'Unassigned'}</div>
+            </div>
+            <div class="event-detail-row">
+                <div class="event-detail-label">Team:</div>
+                <div class="event-detail-value">${props.team || 'N/A'}</div>
+            </div>
+            <div class="event-detail-row">
+                <div class="event-detail-label">Description:</div>
+                <div class="event-detail-value">${props.description || 'N/A'}</div>
+            </div>
+            <div class="event-detail-row">
+                <div class="event-detail-label">Duration:</div>
+                <div class="event-detail-value">${props.duration || 0} hours</div>
+            </div>
+        `;
+        
+        $('#eventModalBody').html(modalBody);
+        $('#eventModalTitle').text('Maintenance Details');
+        $('#btnEditEvent').off('click').on('click', function() {
+            window.location.href = `/maintenance/form/${props.id}`;
+        });
+        
+        new bootstrap.Modal(document.getElementById('eventModal')).show();
+    }
+</script>
+{% endblock %}

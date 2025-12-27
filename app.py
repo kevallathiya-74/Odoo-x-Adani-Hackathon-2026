@@ -175,7 +175,7 @@ def create_equipment():
         if missing_fields:
             return jsonify({
                 'success': False,
-                'error': f\"Missing required fields: {', '.join(missing_fields)}\"
+                'error': f"Missing required fields: {', '.join(missing_fields)}"
             }), 400
         
         equipment = Equipment.create(data)
@@ -318,9 +318,12 @@ def get_maintenance_list():
         limit = request.args.get('limit', 80, type=int)
         offset = request.args.get('offset', 0, type=int)
         state = request.args.get('state')
-        maintenance_type = request.args.get('type')
+        maintenance_type = request.args.get('maintenance_type')
         equipment_id = request.args.get('equipment_id')
         team_id = request.args.get('team_id')
+        priority = request.args.get('priority')
+        is_overdue = request.args.get('is_overdue')
+        search = request.args.get('search')
         
         # Build domain
         domain = []
@@ -332,6 +335,14 @@ def get_maintenance_list():
             domain.append(('equipment_id', '=', equipment_id))
         if team_id:
             domain.append(('team_id', '=', team_id))
+        if priority:
+            domain.append(('priority', '=', priority))
+        if is_overdue == 'true':
+            domain.append(('is_overdue', '=', True))
+        elif is_overdue == 'false':
+            domain.append(('is_overdue', '=', False))
+        if search:
+            domain.append(('name', 'like', search))
         
         # Search requests
         requests = MaintenanceRequest.search(
@@ -436,7 +447,7 @@ def create_maintenance_request():
         if missing_fields:
             return jsonify({
                 'success': False,
-                'error': f\"Missing required fields: {', '.join(missing_fields)}\"
+                'error': f"Missing required fields: {', '.join(missing_fields)}"
             }), 400
         
         # Validate equipment exists

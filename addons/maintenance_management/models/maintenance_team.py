@@ -73,7 +73,7 @@ class MaintenanceTeam(Model):
                 counter = 1
                 original_code = vals['code']
                 while existing:
-                    vals['code'] = f\"{original_code}-{counter}\"
+                    vals['code'] = f"{original_code}-{counter}"
                     existing = cls.search([('code', '=', vals['code'])])
                     counter += 1
         

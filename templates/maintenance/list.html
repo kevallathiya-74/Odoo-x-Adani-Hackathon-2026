@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+
+{% block title %}Maintenance Requests - GearGuard{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-6">
+        <h2><i class="fas fa-tools"></i> Maintenance Requests</h2>
+    </div>
+    <div class="col-md-6 text-end">
+        <button class="btn btn-primary" onclick="window.location.href='/maintenance/form'">
+            <i class="fas fa-plus"></i> New Request
+        </button>
+        <button class="btn btn-outline-secondary" onclick="window.location.href='/maintenance/kanban'">
+            <i class="fas fa-th"></i> Kanban
+        </button>
+        <button class="btn btn-outline-secondary" onclick="window.location.href='/maintenance/calendar'">
+            <i class="fas fa-calendar"></i> Calendar
+        </button>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="filter-bar">
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search requests...">
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="stateFilter">
+                        <option value="">All States</option>
+                        <option value="new">New</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="done">Done</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="typeFilter">
+                        <option value="">All Types</option>
+                        <option value="corrective">Corrective</option>
+                        <option value="preventive">Preventive</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="priorityFilter">
+                        <option value="">All Priorities</option>
+                        <option value="0">Low</option>
+                        <option value="1">Normal</option>
+                        <option value="2">High</option>
+                        <option value="3">Critical</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="overdueFilter">
+                        <option value="">All</option>
+                        <option value="true">Overdue Only</option>
+                        <option value="false">Not Overdue</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <button class="btn btn-secondary w-100" onclick="clearFilters()">
+                        <i class="fas fa-redo"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 5%;">
+                            <input type="checkbox" id="selectAll">
+                        </th>
+                        <th style="width: 12%;">Reference</th>
+                        <th style="width: 18%;">Equipment</th>
+                        <th style="width: 10%;">Type</th>
+                        <th style="width: 10%;">Priority</th>
+                        <th style="width: 10%;">Status</th>
+                        <th style="width: 12%;">Scheduled</th>
+                        <th style="width: 13%;">Team</th>
+                        <th style="width: 10%;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="requestTableBody">
+                    <tr>
+                        <td colspan="9" class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+<div class="row">
+    <div class="col-md-6">
+        <p class="text-muted" id="recordInfo">Showing 0 - 0 of 0 records</p>
+    </div>
+    <div class="col-md-6">
+        <nav>
+            <ul class="pagination justify-content-end" id="pagination"></ul>
+        </nav>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-bar {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+        cursor: pointer;
+    }
+    
+    .badge {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+    
+    .priority-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+    
+    .priority-0 { background: #d1ecf1; color: #0c5460; }
+    .priority-1 { background: #d4edda; color: #155724; }
+    .priority-2 { background: #fff3cd; color: #856404; }
+    .priority-3 { background: #f8d7da; color: #721c24; }
+    
+    .overdue-indicator {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    
+    .action-btn {
+        padding: 2px 8px;
+        font-size: 12px;
+        margin: 0 2px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentPage = 1;
+    let totalRecords = 0;
+    const recordsPerPage = 20;
+    
+    $(document).ready(function() {
+        loadRequests();
+        
+        // Filter change handlers
+        $('#searchInput').on('input', debounce(loadRequests, 500));
+        $('#stateFilter, #typeFilter, #priorityFilter, #overdueFilter').on('change', loadRequests);
+        
+        // Select all checkbox
+        $('#selectAll').on('change', function() {
+            $('tbody input[type="checkbox"]').prop('checked', this.checked);
+        });
+    });
+    
+    function loadRequests(page = 1) {
+        currentPage = page;
+        
+        const params = {
+            limit: recordsPerPage,
+            offset: (page - 1) * recordsPerPage,
+            search: $('#searchInput').val(),
+            state: $('#stateFilter').val(),
+            maintenance_type: $('#typeFilter').val(),
+            priority: $('#priorityFilter').val(),
+            is_overdue: $('#overdueFilter').val()
+        };
+        
+        $.ajax({
+            url: '/api/maintenance',
+            method: 'GET',
+            data: params,
+            success: function(response) {
+                if (response.success) {
+                    totalRecords = response.total;
+                    renderTable(response.data);
+                    renderPagination();
+                    updateRecordInfo();
+                }
+            },
+            error: function() {
+                showToast('Error loading maintenance requests', 'error');
+            }
+        });
+    }
+    
+    function renderTable(requests) {
+        const tbody = $('#requestTableBody');
+        tbody.empty();
+        
+        if (requests.length === 0) {
+            tbody.append(`
+                <tr>
+                    <td colspan="9" class="text-center text-muted">No requests found</td>
+                </tr>
+            `);
+            return;
+        }
+        
+        const priorityLabels = {
+            '0': 'Low', '1': 'Normal', '2': 'High', '3': 'Critical'
+        };
+        
+        const stateLabels = {
+            'new': '<span class="badge bg-info">New</span>',
+            'in_progress': '<span class="badge bg-warning text-dark">In Progress</span>',
+            'done': '<span class="badge bg-success">Done</span>',
+            'cancelled': '<span class="badge bg-secondary">Cancelled</span>'
+        };
+        
+        requests.forEach(req => {
+            const overdueIcon = req.is_overdue ? '<i class="fas fa-exclamation-triangle overdue-indicator" title="Overdue"></i>' : '';
+            
+            const row = `
+                <tr onclick="viewRequest('${req.id}')">
+                    <td onclick="event.stopPropagation()">
+                        <input type="checkbox" class="row-checkbox" data-id="${req.id}">
+                    </td>
+                    <td><strong>${req.name}</strong></td>
+                    <td>
+                        ${req.equipment_name || 'N/A'}<br>
+                        <small class="text-muted">${req.equipment_category || ''}</small>
+                    </td>
+                    <td>
+                        <span class="badge ${req.maintenance_type === 'preventive' ? 'bg-success' : 'bg-warning text-dark'}">
+                            ${req.maintenance_type === 'preventive' ? 'Preventive' : 'Corrective'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="priority-badge priority-${req.priority || '1'}">
+                            ${priorityLabels[req.priority] || 'Normal'}
+                        </span>
+                    </td>
+                    <td>${stateLabels[req.state] || 'Unknown'}</td>
+                    <td>
+                        ${overdueIcon}
+                        ${req.schedule_date || 'N/A'}
+                    </td>
+                    <td>
+                        ${req.team_name || 'N/A'}<br>
+                        <small class="text-muted">${req.technician_name || 'Unassigned'}</small>
+                    </td>
+                    <td onclick="event.stopPropagation()">
+                        <button class="btn btn-sm btn-outline-primary action-btn" onclick="editRequest('${req.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        ${req.state === 'new' ? `
+                        <button class="btn btn-sm btn-outline-success action-btn" onclick="startRequest('${req.id}')">
+                            <i class="fas fa-play"></i>
+                        </button>` : ''}
+                        ${req.state === 'in_progress' ? `
+                        <button class="btn btn-sm btn-outline-info action-btn" onclick="completeRequest('${req.id}')">
+                            <i class="fas fa-check"></i>
+                        </button>` : ''}
+                    </td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+    }
+    
+    function renderPagination() {
+        const totalPages = Math.ceil(totalRecords / recordsPerPage);
+        const pagination = $('#pagination');
+        pagination.empty();
+        
+        if (totalPages <= 1) return;
+        
+        // Previous button
+        pagination.append(`
+            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="loadRequests(${currentPage - 1}); return false;">Previous</a>
+            </li>
+        `);
+        
+        // Page numbers
+        for (let i = 1; i <= Math.min(totalPages, 10); i++) {
+            pagination.append(`
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="loadRequests(${i}); return false;">${i}</a>
+                </li>
+            `);
+        }
+        
+        // Next button
+        pagination.append(`
+            <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="loadRequests(${currentPage + 1}); return false;">Next</a>
+            </li>
+        `);
+    }
+    
+    function updateRecordInfo() {
+        const start = (currentPage - 1) * recordsPerPage + 1;
+        const end = Math.min(currentPage * recordsPerPage, totalRecords);
+        $('#recordInfo').text(`Showing ${start} - ${end} of ${totalRecords} records`);
+    }
+    
+    function clearFilters() {
+        $('#searchInput').val('');
+        $('#stateFilter, #typeFilter, #priorityFilter, #overdueFilter').val('');
+        loadRequests();
+    }
+    
+    function viewRequest(id) {
+        window.location.href = `/maintenance/form/${id}`;
+    }
+    
+    function editRequest(id) {
+        window.location.href = `/maintenance/form/${id}`;
+    }
+    
+    function startRequest(id) {
+        if (confirm('Start this maintenance request?')) {
+            $.post(`/api/maintenance/${id}/start`, function(response) {
+                if (response.success) {
+                    showToast('Request started', 'success');
+                    loadRequests(currentPage);
+                }
+            });
+        }
+    }
+    
+    function completeRequest(id) {
+        if (confirm('Mark this request as completed?')) {
+            $.post(`/api/maintenance/${id}/done`, function(response) {
+                if (response.success) {
+                    showToast('Request completed', 'success');
+                    loadRequests(currentPage);
+                }
+            });
+        }
+    }
+    
+    function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+</script>
+{% endblock %}

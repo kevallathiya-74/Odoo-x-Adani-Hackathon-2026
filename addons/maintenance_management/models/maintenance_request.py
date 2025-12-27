@@ -196,7 +196,10 @@ class MaintenanceRequest(Model):
                 if new_state not in valid_transitions[current_state] and new_state != current_state:
                     # Allow if it's a force update or stage change
                     if 'stage' not in vals:
-                        raise ValueError(f\"Invalid state transition: {current_state} -> {new_state}\")\n        \n        # State change logic\n        if 'state' in vals:
+                        raise ValueError(f"Invalid state transition: {current_state} -> {new_state}")
+        
+        # State change logic
+        if 'state' in vals:
             # Starting work
             if vals['state'] == 'in_progress' and self.state == 'new':
                 vals['start_date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -260,7 +263,7 @@ class MaintenanceRequest(Model):
         import random
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         random_suffix = random.randint(100, 999)
-        return f\"MNT-{timestamp}-{random_suffix}\"
+        return f"MNT-{timestamp}-{random_suffix}"
     
     @staticmethod
     def _get_equipment_details(equipment_id):
