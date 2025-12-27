@@ -105,7 +105,35 @@
                         <select class="form-select" id="teamMembers" multiple size="5">
                             <!-- Members will be loaded dynamically -->
                         </select>
-                        <small class="text-muted">Hold Ctrl/Cmd to select multiple members</small>
+                        <small class="text-muted d-block">Hold Ctrl/Cmd to select multiple members</small>
+                        <button type="button" class="btn btn-sm btn-outline-success mt-2" onclick="showAddMemberForm()">
+                            <i class="fas fa-user-plus"></i> Add New Team Member
+                        </button>
+                        <div id="addMemberForm" style="display:none;" class="mt-3 p-3 border rounded bg-light">
+                            <h6>Quick Add Member</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <input type="text" class="form-control form-control-sm" id="newMemberName" placeholder="Full Name *">
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <input type="email" class="form-control form-control-sm" id="newMemberEmail" placeholder="Email *">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-2">
+                                    <input type="text" class="form-control form-control-sm" id="newMemberUsername" placeholder="Username *">
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <input type="password" class="form-control form-control-sm" id="newMemberPassword" placeholder="Password *">
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-success" onclick="addNewMember()">
+                                <i class="fas fa-check"></i> Create & Add
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="hideAddMemberForm()">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
                     </div>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="teamActive" checked>
@@ -310,10 +338,65 @@
                 if (response.success) {
                     showToast('Team deleted successfully', 'success');
                     loadTeams();
+                } else {
+                    showToast(response.error || 'Error deleting team', 'error');
                 }
             },
-            error: function() {
-                showToast('Error deleting team', 'error');
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON?.error || 'Error deleting team';
+                showToast(errorMsg, 'error');
+            }
+        });
+    }
+    
+    function showAddMemberForm() {
+        $('#addMemberForm').slideDown();
+    }
+    
+    function hideAddMemberForm() {
+        $('#addMemberForm').slideUp();
+        $('#newMemberName, #newMemberEmail, #newMemberUsername, #newMemberPassword').val('');
+    }
+    
+    function addNewMember() {
+        const name = $('#newMemberName').val().trim();
+        const email = $('#newMemberEmail').val().trim();
+        const username = $('#newMemberUsername').val().trim();
+        const password = $('#newMemberPassword').val().trim();
+        
+        if (!name || !email || !username || !password) {
+            showToast('Please fill all required fields', 'error');
+            return;
+        }
+        
+        // Create new portal user
+        $.ajax({
+            url: '/api/portal-users',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                name: name,
+                email: email,
+                username: username,
+                password: password,
+                active: true
+            }),
+            success: function(response) {
+                if (response.success) {
+                    showToast('Team member created successfully', 'success');
+                    hideAddMemberForm();
+                    // Reload users and select the new one
+                    loadAvailableUsers();
+                    setTimeout(() => {
+                        $('#teamMembers').val([...($('#teamMembers').val() || []), response.data.id]);
+                    }, 500);
+                } else {
+                    showToast(response.error || 'Error creating member', 'error');
+                }
+            },
+            error: function(xhr) {
+                const errorMsg = xhr.responseJSON?.error || 'Error creating member';
+                showToast(errorMsg, 'error');
             }
         });
     }
@@ -322,12 +405,12 @@
         // Simple toast implementation
         const toast = $(`
             <div class="alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} 
-                         position-fixed top-0 end-0 m-3" style="z-index: 9999;">
+                         position-fixed top-0 end-0 m-3" style="z-index: 9999; min-width: 300px;">
                 ${message}
             </div>
         `);
         $('body').append(toast);
-        setTimeout(() => toast.fadeOut(() => toast.remove()), 3000);
+        setTimeout(() => toast.fadeOut(() => toast.remove()), 5000);
     }
 </script>
 {% endblock %}

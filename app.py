@@ -309,17 +309,57 @@ def scrap_equipment(equipment_id):
 # PORTAL USER ROUTES
 # ============================================================================
 
-@app.route('/api/portal-users', methods=['GET'])
-def list_portal_users():
-    """API: List all portal users (for team member selection)"""
-    try:
-        users = PortalUser.search([('active', '=', True)])
-        return jsonify({
-            'success': True,
-            'data': [user.read() for user in users]
-        })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+@app.route('/api/portal-users', methods=['GET', 'POST'])
+def portal_users():
+    """API: List or create portal users"""
+    if request.method == 'GET':
+        try:
+            users = PortalUser.search([('active', '=', True)])
+            return jsonify({
+                'success': True,
+                'data': [user.read() for user in users]
+            })
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+    
+    elif request.method == 'POST':
+        try:
+            data = request.get_json()
+            
+            # Validate required fields
+            required_fields = ['name', 'email', 'username', 'password']
+            if not all(field in data for field in required_fields):
+                return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+            
+            # Check if username already exists
+            existing_username = PortalUser.search([('username', '=', data['username'])])
+            if existing_username:
+                return jsonify({'success': False, 'error': 'Username already exists'}), 400
+            
+            # Check if email already exists
+            existing_email = PortalUser.search([('email', '=', data['email'])])
+            if existing_email:
+                return jsonify({'success': False, 'error': 'Email already exists'}), 400
+            
+            # Hash the password
+            import bcrypt
+            hashed_password = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt())
+            data['password'] = hashed_password.decode('utf-8')
+            
+            # Set defaults
+            data.setdefault('active', True)
+            
+            # Create the portal user
+            user = PortalUser.create(data)
+            
+            return jsonify({
+                'success': True,
+                'data': user.read(),
+                'message': 'Portal user created successfully'
+            }), 201
+            
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 400
 
 # ============================================================================
 # MAINTENANCE TEAM ROUTES
@@ -384,10 +424,12 @@ def update_team(team_id):
 def delete_team(team_id):
     """API: Delete team"""
     try:
-        team = MaintenanceTeam.browse([team_id])
+        teams = MaintenanceTeam.browse([team_id])
         
-        if not team:
+        if not teams:
             return jsonify({'success': False, 'error': 'Team not found'}), 404
+        
+        team = teams[0]
         
         # Check if team has active maintenance requests
         active_requests = MaintenanceRequest.search_count([
@@ -398,7 +440,18 @@ def delete_team(team_id):
         if active_requests > 0:
             return jsonify({
                 'success': False, 
-                'error': f'Cannot delete team with {active_requests} active maintenance requests'
+                'error': f'Cannot delete team: {active_requests} active maintenance request(s) assigned. Complete or reassign them first.'
+            }), 400
+        
+        # Check if team has assigned equipment
+        assigned_equipment = Equipment.search_count([
+            ('maintenance_team_id', '=', team_id)
+        ])
+        
+        if assigned_equipment > 0:
+            return jsonify({
+                'success': False,
+                'error': f'Cannot delete team: {assigned_equipment} equipment item(s) assigned. Reassign equipment to another team first.'
             }), 400
         
         team.unlink()
@@ -408,6 +461,7 @@ def delete_team(team_id):
             'message': 'Team deleted successfully'
         })
     except Exception as e:
+        print(f"[ERROR] Delete team {team_id}: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
 # ============================================================================
