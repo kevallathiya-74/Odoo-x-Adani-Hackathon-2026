@@ -37,57 +37,72 @@ body {
     border-radius: 4px;
 }
 
-/* Statistics Cards */
-.stat-card {
-    border: none;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s, box-shadow 0.3s;
-    overflow: hidden;
+/* Odoo-style Kanban Cards for Dashboard KPIs */
+.o_kanban_card {
+    background: white;
+    border: 1px solid #e2e2e0;
+    border-radius: 4px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    min-height: 140px;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.o_kanban_card_clickable {
+    cursor: pointer;
 }
 
-.stat-card .card-body {
+.o_kanban_card_clickable:hover {
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+    border-color: #714B67;
+}
+
+.o_kanban_card_header {
     display: flex;
     align-items: center;
-    padding: 1.5rem;
+    justify-content: space-between;
+    margin-bottom: 12px;
 }
 
-.stat-icon {
-    font-size: 3rem;
-    margin-right: 1rem;
-    opacity: 0.8;
-}
-
-.stat-content h3 {
-    font-size: 2rem;
-    font-weight: bold;
-    margin: 0;
-}
-
-.stat-content p {
-    margin: 0;
+.o_kanban_card_header_title {
+    font-size: 13px;
+    font-weight: 500;
     color: #6c757d;
-    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-/* Stat Card Colors */
-.stat-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-.stat-success { background: linear-gradient(135deg, #84fab0 0%, #28a745 100%); color: white; }
-.stat-warning { background: linear-gradient(135deg, #ffd89b 0%, #ffc107 100%); color: white; }
-.stat-danger { background: linear-gradient(135deg, #f093fb 0%, #dc3545 100%); color: white; }
-.stat-info { background: linear-gradient(135deg, #4facfe 0%, #17a2b8 100%); color: white; }
+.o_kanban_card_body {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
-.stat-primary .stat-content p,
-.stat-success .stat-content p,
-.stat-warning .stat-content p,
-.stat-danger .stat-content p,
-.stat-info .stat-content p {
-    color: rgba(255, 255, 255, 0.9);
+.o_primary_value {
+    font-size: 42px;
+    font-weight: 300;
+    color: #212529;
+    line-height: 1;
+    letter-spacing: -1px;
+}
+
+.o_kanban_card_footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: 8px;
+    min-height: 20px;
+}
+
+.o_kanban_card_footer i {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.o_kanban_card_clickable:hover .o_kanban_card_footer i {
+    opacity: 1;
 }
 
 /* Cards */

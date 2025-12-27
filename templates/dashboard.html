@@ -9,120 +9,121 @@
     </div>
 </div>
 
-<!-- Statistics Cards -->
-<div class="row mb-4">
+<!-- Statistics Cards - Odoo Enterprise Style -->
+<div class="row g-3 mb-4">
     <!-- Equipment Stats -->
-    <div class="col-md-3">
-        <div class="card stat-card stat-primary" onclick="window.location.href='/equipment'" style="cursor: pointer;">
-            <div class="card-body">
-                <div class="stat-icon">
-                    <i class="fas fa-tools"></i>
-                </div>
-                <div class="stat-content">
-                    <h3 id="totalEquipment">0</h3>
-                    <p>Total Equipment</p>
-                </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="o_kanban_card o_kanban_card_clickable" onclick="window.location.href='/equipment'">
+            <div class="o_kanban_card_header">
+                <span class="o_kanban_card_header_title">Total Equipment</span>
+            </div>
+            <div class="o_kanban_card_body">
+                <div class="o_primary_value" id="totalEquipment">0</div>
+            </div>
+            <div class="o_kanban_card_footer">
+                <i class="fa fa-arrow-right text-muted small"></i>
             </div>
         </div>
     </div>
     
-    <div class="col-md-3">
-        <div class="card stat-card stat-success" onclick="window.location.href='/equipment?state=active'" style="cursor: pointer;">
-            <div class="card-body">
-                <div class="stat-icon">
-                    <i class="fas fa-check-circle"></i>
-                </div>
-                <div class="stat-content">
-                    <h3 id="activeEquipment">0</h3>
-                    <p>Active Equipment</p>
-                </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="o_kanban_card o_kanban_card_clickable" onclick="window.location.href='/equipment?state=active'">
+            <div class="o_kanban_card_header">
+                <span class="o_kanban_card_header_title">Active Equipment</span>
+            </div>
+            <div class="o_kanban_card_body">
+                <div class="o_primary_value text-success" id="activeEquipment">0</div>
+            </div>
+            <div class="o_kanban_card_footer">
+                <i class="fa fa-arrow-right text-muted small"></i>
             </div>
         </div>
     </div>
     
-    <div class="col-md-3">
-        <div class="card stat-card stat-warning" onclick="window.location.href='/equipment?state=under_maintenance'" style="cursor: pointer;">
-            <div class="card-body">
-                <div class="stat-icon">
-                    <i class="fas fa-wrench"></i>
-                </div>
-                <div class="stat-content">
-                    <h3 id="underMaintenance">0</h3>
-                    <p>Under Maintenance</p>
-                </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="o_kanban_card o_kanban_card_clickable" onclick="window.location.href='/equipment?state=under_maintenance'">
+            <div class="o_kanban_card_header">
+                <span class="o_kanban_card_header_title">Under Maintenance</span>
+            </div>
+            <div class="o_kanban_card_body">
+                <div class="o_primary_value text-warning" id="underMaintenance">0</div>
+            </div>
+            <div class="o_kanban_card_footer">
+                <i class="fa fa-arrow-right text-muted small"></i>
             </div>
         </div>
     </div>
     
-    <div class="col-md-3">
-        <div class="card stat-card stat-danger" onclick="window.location.href='/maintenance?is_overdue=true'" style="cursor: pointer;">
-            <div class="card-body">
-                <div class="stat-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="stat-content">
-                    <h3 id="overdueRequests">0</h3>
-                    <p>Overdue Requests</p>
-                </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="o_kanban_card o_kanban_card_clickable" onclick="window.location.href='/maintenance?is_overdue=true'">
+            <div class="o_kanban_card_header">
+                <span class="o_kanban_card_header_title">Overdue</span>
+                <span class="badge bg-danger ms-auto">!</span>
+            </div>
+            <div class="o_kanban_card_body">
+                <div class="o_primary_value text-danger" id="overdueRequests">0</div>
+            </div>
+            <div class="o_kanban_card_footer">
+                <i class="fa fa-arrow-right text-muted small"></i>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Maintenance Request Stats -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card stat-card stat-info" onclick="window.location.href='/maintenance?state=new'" style="cursor: pointer;">
-            <div class="card-body">
-                <div class="stat-icon">
-                    <i class="fas fa-plus-circle"></i>
-                </div>
-                <div class="stat-content">
-                    <h3 id="newRequests">0</h3>
-                    <p>New Requests</p>
-                </div>
+<div class="row g-3 mb-4">
+    <div class="col-lg-3 col-md-6">
+        <div class="o_kanban_card o_kanban_card_clickable" onclick="window.location.href='/maintenance?state=new'">
+            <div class="o_kanban_card_header">
+                <span class="o_kanban_card_header_title">New Requests</span>
+            </div>
+            <div class="o_kanban_card_body">
+                <div class="o_primary_value text-primary" id="newRequests">0</div>
+            </div>
+            <div class="o_kanban_card_footer">
+                <i class="fa fa-arrow-right text-muted small"></i>
             </div>
         </div>
     </div>
     
-    <div class="col-md-3">
-        <div class="card stat-card stat-warning" onclick="window.location.href='/maintenance?state=in_progress'" style="cursor: pointer;">
-            <div class="card-body">
-                <div class="stat-icon">
-                    <i class="fas fa-spinner"></i>
-                </div>
-                <div class="stat-content">
-                    <h3 id="inProgressRequests">0</h3>
-                    <p>In Progress</p>
-                </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="o_kanban_card o_kanban_card_clickable" onclick="window.location.href='/maintenance?state=in_progress'">
+            <div class="o_kanban_card_header">
+                <span class="o_kanban_card_header_title">In Progress</span>
+            </div>
+            <div class="o_kanban_card_body">
+                <div class="o_primary_value text-info" id="inProgressRequests">0</div>
+            </div>
+            <div class="o_kanban_card_footer">
+                <i class="fa fa-arrow-right text-muted small"></i>
             </div>
         </div>
     </div>
     
-    <div class="col-md-3">
-        <div class="card stat-card stat-success" onclick="window.location.href='/maintenance?state=done'" style="cursor: pointer;">
-            <div class="card-body">
-                <div class="stat-icon">
-                    <i class="fas fa-check-double"></i>
-                </div>
-                <div class="stat-content">
-                    <h3 id="completedRequests">0</h3>
-                    <p>Completed</p>
-                </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="o_kanban_card o_kanban_card_clickable" onclick="window.location.href='/maintenance?state=done'">
+            <div class="o_kanban_card_header">
+                <span class="o_kanban_card_header_title">Completed</span>
+            </div>
+            <div class="o_kanban_card_body">
+                <div class="o_primary_value text-success" id="completedRequests">0</div>
+            </div>
+            <div class="o_kanban_card_footer">
+                <i class="fa fa-arrow-right text-muted small"></i>
             </div>
         </div>
     </div>
     
-    <div class="col-md-3">
-        <div class="card stat-card stat-primary" onclick="window.location.href='/teams'" style="cursor: pointer;">
-            <div class="card-body">
-                <div class="stat-icon">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div class="stat-content">
-                    <h3 id="totalTeams">0</h3>
-                    <p>Active Teams</p>
-                </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="o_kanban_card o_kanban_card_clickable" onclick="window.location.href='/teams'">
+            <div class="o_kanban_card_header">
+                <span class="o_kanban_card_header_title">Active Teams</span>
+            </div>
+            <div class="o_kanban_card_body">
+                <div class="o_primary_value" id="totalTeams">0</div>
+            </div>
+            <div class="o_kanban_card_footer">
+                <i class="fa fa-arrow-right text-muted small"></i>
             </div>
         </div>
     </div>
