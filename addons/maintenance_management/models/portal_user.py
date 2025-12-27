@@ -4,7 +4,7 @@ Manages user authentication and portal access
 """
 from core.models import Model
 from core.fields import fields
-from datetime import datetime
+from datetime import datetime, timedelta
 import bcrypt
 
 class PortalUser(Model):
@@ -91,7 +91,6 @@ class PortalUser(Model):
         
         # Check if account is locked
         if user_data.get('locked_until'):
-            from datetime import datetime
             locked_until = user_data['locked_until']
             if isinstance(locked_until, str):
                 locked_until = datetime.fromisoformat(locked_until)
@@ -106,7 +105,6 @@ class PortalUser(Model):
             
             # Lock account after 5 failed attempts
             if attempts >= 5:
-                from datetime import timedelta
                 update_vals['locked_until'] = datetime.now() + timedelta(minutes=15)
             
             user.write(update_vals)

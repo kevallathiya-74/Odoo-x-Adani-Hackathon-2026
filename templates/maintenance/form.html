@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block title %}Maintenance Request - GearGuard{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-8">
+        <h2><i class="fas fa-wrench"></i> <span id="formTitle">New Maintenance Request</span></h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <button class="btn btn-outline-secondary" onclick="window.location.href='/maintenance'">
+            <i class="fas fa-arrow-left"></i> Back to List
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form id="maintenanceForm">
+                    <input type="hidden" id="requestId" value="{{ request_id if request_id else '' }}">
+                    
+                    <!-- Equipment Selection -->
+                    <div class="mb-3">
+                        <label for="equipment" class="form-label">Equipment <span class="text-danger">*</span></label>
+                        <select class="form-select" id="equipment" required>
+                            <option value="">Select Equipment</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Request Title -->
+                    <div class="mb-3">
+                        <label for="requestName" class="form-label">Request Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="requestName" placeholder="e.g., Replace hydraulic seal" required>
+                    </div>
+                    
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" rows="4" placeholder="Detailed description of the maintenance need..."></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Maintenance Type -->
+                        <div class="col-md-6 mb-3">
+                            <label for="maintenanceType" class="form-label">Maintenance Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="maintenanceType" required>
+                                <option value="corrective">Corrective (Breakdown)</option>
+                                <option value="preventive">Preventive (Scheduled)</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Priority -->
+                        <div class="col-md-6 mb-3">
+                            <label for="priority" class="form-label">Priority <span class="text-danger">*</span></label>
+                            <select class="form-select" id="priority" required>
+                                <option value="0">Low</option>
+                                <option value="1" selected>Normal</option>
+                                <option value="2">High</option>
+                                <option value="3">Critical</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Schedule Date -->
+                        <div class="col-md-6 mb-3">
+                            <label for="scheduleDate" class="form-label">Scheduled Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="scheduleDate" required>
+                        </div>
+                        
+                        <!-- Duration -->
+                        <div class="col-md-6 mb-3">
+                            <label for="duration" class="form-label">Expected Duration (hours)</label>
+                            <input type="number" class="form-control" id="duration" min="0" step="0.5" placeholder="e.g., 2.5">
+                        </div>
+                    </div>
+                    
+                    <!-- Team Assignment -->
+                    <div class="mb-3">
+                        <label for="team" class="form-label">Assign to Team <span class="text-danger">*</span></label>
+                        <select class="form-select" id="team" required>
+                            <option value="">Select Team</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Technician -->
+                    <div class="mb-3">
+                        <label for="technician" class="form-label">Technician</label>
+                        <input type="text" class="form-control" id="technician" placeholder="Assign specific technician (optional)">
+                    </div>
+                    
+                    <!-- Notes -->
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Additional Notes</label>
+                        <textarea class="form-control" id="notes" rows="3" placeholder="Any additional information..."></textarea>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save"></i> Save Request
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4" id="editSidebar" style="display: none;">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-info-circle"></i> Request Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Status:</strong>
+                    <span id="currentStatus" class="badge">-</span>
+                </div>
+                <div class="mb-3">
+                    <strong>Created:</strong><br>
+                    <span id="createdDate">-</span>
+                </div>
+                <div class="mb-3">
+                    <strong>Last Modified:</strong><br>
+                    <span id="modifiedDate">-</span>
+                </div>
+                
+                <hr>
+                
+                <div id="stateActions">
+                    <!-- Dynamic action buttons based on state -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3" id="equipmentInfo" style="display: none;">
+            <div class="card-header">
+                <h6><i class="fas fa-tools"></i> Equipment Details</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <strong>Name:</strong><br>
+                    <span id="eqName">-</span>
+                </div>
+                <div class="mb-2">
+                    <strong>Location:</strong><br>
+                    <span id="eqLocation">-</span>
+                </div>
+                <div class="mb-2">
+                    <strong>Department:</strong><br>
+                    <span id="eqDepartment">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let equipmentList = [];
+    let teamList = [];
+    const requestId = $('#requestId').val();
+    
+    $(document).ready(function() {
+        loadEquipment();
+        loadTeams();
+        
+        // Set default schedule date to today
+        const today = new Date().toISOString().split('T')[0];
+        $('#scheduleDate').val(today);
+        
+        if (requestId) {
+            loadRequest();
+        }
+        
+        $('#maintenanceForm').on('submit', function(e) {
+            e.preventDefault();
+            saveRequest();
+        });
+    });
+    
+    function loadEquipment() {
+        $.ajax({
+            url: '/api/equipment?state=active',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    equipmentList = response.data;
+                    const select = $('#equipment');
+                    select.empty().append('<option value="">Select Equipment</option>');
+                    response.data.forEach(eq => {
+                        select.append(`<option value="${eq.id}">${eq.name} (${eq.serial_no || 'N/A'})</option>`);
+                    });
+                }
+            }
+        });
+    }
+    
+    function loadTeams() {
+        $.ajax({
+            url: '/api/teams',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    teamList = response.data;
+                    const select = $('#team');
+                    select.empty().append('<option value="">Select Team</option>');
+                    response.data.forEach(team => {
+                        if (team.active) {
+                            select.append(`<option value="${team.id}">${team.name}</option>`);
+                        }
+                    });
+                }
+            }
+        });
+    }
+    
+    function loadRequest() {
+        $.ajax({
+            url: `/api/maintenance/${requestId}`,
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    populateForm(response.data);
+                    $('#formTitle').text('Edit Maintenance Request');
+                    $('#editSidebar').show();
+                }
+            },
+            error: function() {
+                showToast('Error loading maintenance request', 'error');
+                setTimeout(() => window.location.href = '/maintenance', 2000);
+            }
+        });
+    }
+    
+    function populateForm(data) {
+        $('#requestName').val(data.name);
+        $('#equipment').val(data.equipment_id);
+        $('#description').val(data.description || '');
+        $('#maintenanceType').val(data.maintenance_type);
+        $('#priority').val(data.priority);
+        $('#scheduleDate').val(data.schedule_date ? data.schedule_date.split(' ')[0] : '');
+        $('#duration').val(data.duration || '');
+        $('#team').val(data.team_id);
+        $('#technician').val(data.technician_name || '');
+        $('#notes').val(data.notes || '');
+        
+        // Update status info
+        const stateLabels = {
+            'new': '<span class="badge bg-info">New</span>',
+            'in_progress': '<span class="badge bg-warning">In Progress</span>',
+            'done': '<span class="badge bg-success">Done</span>',
+            'cancelled': '<span class="badge bg-secondary">Cancelled</span>'
+        };
+        $('#currentStatus').html(stateLabels[data.state] || 'Unknown');
+        $('#createdDate').text(data.create_date || 'N/A');
+        $('#modifiedDate').text(data.write_date || 'N/A');
+        
+        // Show equipment info
+        if (data.equipment_name) {
+            $('#eqName').text(data.equipment_name);
+            $('#eqLocation').text(data.equipment_location || 'N/A');
+            $('#eqDepartment').text(data.equipment_department || 'N/A');
+            $('#equipmentInfo').show();
+        }
+        
+        // Generate state action buttons
+        generateStateActions(data.state);
+    }
+    
+    function generateStateActions(state) {
+        const actions = $('#stateActions');
+        actions.empty();
+        
+        if (state === 'new') {
+            actions.append(`
+                <button class="btn btn-success w-100 mb-2" onclick="changeState('in_progress')">
+                    <i class="fas fa-play"></i> Start Work
+                </button>
+                <button class="btn btn-secondary w-100" onclick="changeState('cancelled')">
+                    <i class="fas fa-ban"></i> Cancel
+                </button>
+            `);
+        } else if (state === 'in_progress') {
+            actions.append(`
+                <button class="btn btn-primary w-100 mb-2" onclick="changeState('done')">
+                    <i class="fas fa-check"></i> Complete
+                </button>
+                <button class="btn btn-secondary w-100" onclick="changeState('cancelled')">
+                    <i class="fas fa-ban"></i> Cancel
+                </button>
+            `);
+        }
+    }
+    
+    function changeState(newState) {
+        if (!requestId) return;
+        
+        const confirmMsg = newState === 'done' 
+            ? 'Mark this request as completed?' 
+            : newState === 'cancelled' 
+            ? 'Cancel this maintenance request?' 
+            : 'Start working on this request?';
+        
+        confirmAction(confirmMsg, function() {
+            $.ajax({
+                url: `/api/maintenance/${requestId}/state`,
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ state: newState }),
+                success: function(response) {
+                    if (response.success) {
+                        showToast(response.message || 'State updated', 'success');
+                        loadRequest(); // Reload to update UI
+                    }
+                },
+                error: function() {
+                    showToast('Failed to update state', 'error');
+                }
+            });
+        });
+    }
+    
+    function saveRequest() {
+        const equipmentId = $('#equipment').val();
+        const teamId = $('#team').val();
+        
+        if (!equipmentId) {
+            showToast('Please select equipment', 'error');
+            return;
+        }
+        if (!teamId) {
+            showToast('Please select a team', 'error');
+            return;
+        }
+        
+        const equipment = equipmentList.find(e => e.id == equipmentId);
+        const team = teamList.find(t => t.id == teamId);
+        
+        const formData = {
+            name: $('#requestName').val(),
+            equipment_id: equipmentId,
+            equipment_name: equipment ? equipment.name : '',
+            equipment_category: equipment ? equipment.category : '',
+            equipment_location: equipment ? equipment.location : '',
+            equipment_department: equipment ? equipment.department_name : '',
+            description: $('#description').val(),
+            maintenance_type: $('#maintenanceType').val(),
+            priority: $('#priority').val(),
+            schedule_date: $('#scheduleDate').val(),
+            duration: parseFloat($('#duration').val()) || 0,
+            team_id: teamId,
+            team_name: team ? team.name : '',
+            technician_name: $('#technician').val() || '',
+            notes: $('#notes').val(),
+            state: requestId ? undefined : 'new' // Only set state for new requests
+        };
+        
+        const url = requestId ? `/api/maintenance/${requestId}` : '/api/maintenance';
+        const method = requestId ? 'PUT' : 'POST';
+        
+        $.ajax({
+            url: url,
+            method: method,
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                if (response.success) {
+                    showToast(response.message || 'Request saved successfully', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/maintenance';
+                    }, 1500);
+                }
+            },
+            error: function(xhr) {
+                const error = xhr.responseJSON?.error || 'Failed to save request';
+                showToast(error, 'error');
+            }
+        });
+    }
+</script>
+{% endblock %}

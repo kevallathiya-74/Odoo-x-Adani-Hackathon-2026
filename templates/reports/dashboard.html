@@ -529,7 +529,176 @@
     }
     
     function exportData(format) {
-        showToast(`Export ${format.toUpperCase()} feature coming soon!`, 'info');
+        if (format === 'excel') {
+            exportToExcel();
+        } else if (format === 'pdf') {
+            exportToPDF();
+        }
+    }
+    
+    function exportToExcel() {
+        // Gather all report data
+        const reportData = {
+            timestamp: new Date().toISOString(),
+            stats: {
+                total: parseInt($('#totalRequests').text()) || 0,
+                completed: parseInt($('#completedRequests').text()) || 0,
+                active: parseInt($('#activeRequests').text()) || 0,
+                overdue: parseInt($('#overdueRequests').text()) || 0
+            },
+            pivot: pivotData
+        };
+        
+        // Create CSV content
+        let csv = 'Maintenance Management Report\n';
+        csv += 'Generated: ' + new Date().toLocaleString() + '\n\n';
+        
+        csv += 'SUMMARY STATISTICS\n';
+        csv += 'Total Requests,' + reportData.stats.total + '\n';
+        csv += 'Completed,' + reportData.stats.completed + '\n';
+        csv += 'Active,' + reportData.stats.active + '\n';
+        csv += 'Overdue,' + reportData.stats.overdue + '\n\n';
+        
+        csv += 'MAINTENANCE REQUESTS DETAIL\n';
+        csv += 'Reference,Equipment,Type,Priority,Status,Scheduled Date,Team,Duration,Cost\n';
+        
+        pivotData.forEach(row => {
+            csv += `"${row.name}","${row.equipment_name || 'N/A'}","${row.maintenance_type}",`;
+            csv += `"${row.priority}","${row.state}","${row.schedule_date || 'N/A'}",`;
+            csv += `"${row.team_name || 'N/A'}","${row.duration || 0}","${row.cost || 0}"\n`;
+        });
+        
+        // Download file
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'maintenance_report_' + new Date().toISOString().split('T')[0] + '.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showToast('Report exported to Excel (CSV)', 'success');
+    }
+    
+    function exportToPDF() {
+        // Open print dialog with formatted report
+        const printWindow = window.open('', '', 'height=600,width=800');
+        
+        let html = `
+            <html>
+            <head>
+                <title>Maintenance Management Report</title>
+                <style>
+                    body { font-family: Arial, sans-serif; padding: 20px; }
+                    h1 { color: #714B67; border-bottom: 3px solid #714B67; padding-bottom: 10px; }
+                    h2 { color: #333; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                    th { background-color: #714B67; color: white; padding: 10px; text-align: left; }
+                    td { padding: 8px; border-bottom: 1px solid #ddd; }
+                    tr:nth-child(even) { background-color: #f9f9f9; }
+                    .stats { display: flex; justify-content: space-around; margin: 20px 0; }
+                    .stat-box { text-align: center; padding: 20px; background: #f5f5f5; border-radius: 8px; }
+                    .stat-box h3 { margin: 0; font-size: 32px; color: #714B67; }
+                    .stat-box p { margin: 5px 0 0 0; color: #666; }
+                    @media print {
+                        body { padding: 10mm; }
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>🔧 GearGuard Maintenance Management Report</h1>
+                <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+                
+                <h2>Summary Statistics</h2>
+                <div class="stats">
+                    <div class="stat-box">
+                        <h3>${$('#totalRequests').text()}</h3>
+                        <p>Total Requests</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3>${$('#completedRequests').text()}</h3>
+                        <p>Completed</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3>${$('#activeRequests').text()}</h3>
+                        <p>Active</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3>${$('#overdueRequests').text()}</h3>
+                        <p>Overdue</p>
+                    </div>
+                </div>
+                
+                <h2>Maintenance Requests</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Reference</th>
+                            <th>Equipment</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Scheduled</th>
+                            <th>Team</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+        
+        pivotData.slice(0, 50).forEach(row => {
+            html += `
+                        <tr>
+                            <td>${row.name}</td>
+                            <td>${row.equipment_name || 'N/A'}</td>
+                            <td>${row.maintenance_type}</td>
+                            <td>${row.state}</td>
+                            <td>${row.schedule_date || 'N/A'}</td>
+                            <td>${row.team_name || 'N/A'}</td>
+                        </tr>`;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+                ${pivotData.length > 50 ? '<p><em>Showing first 50 records. Export to Excel for full data.</em></p>' : ''}
+                
+                <h2>Pivot Analysis</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+        
+        // Add pivot table from current view
+        $('#pivotTableBody tr').each(function() {
+            const cells = $(this).find('td');
+            if (cells.length >= 2) {
+                html += `<tr><td>${cells.eq(0).text()}</td><td>${cells.eq(1).text()}</td></tr>`;
+            }
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+                
+                <p style="margin-top: 40px; text-align: center; color: #999; font-size: 12px;">
+                    © 2026 GearGuard - Maintenance Management System | Odoo × Adani Hackathon
+                </p>
+            </body>
+            </html>`;
+        
+        printWindow.document.write(html);
+        printWindow.document.close();
+        
+        // Wait for content to load, then print
+        setTimeout(() => {
+            printWindow.print();
+        }, 500);
+        
+        showToast('Opening print dialog for PDF export', 'success');
     }
 </script>
 {% endblock %}
