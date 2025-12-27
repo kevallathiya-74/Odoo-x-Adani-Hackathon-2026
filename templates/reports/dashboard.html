@@ -401,8 +401,12 @@
             method: 'GET',
             success: function(response) {
                 if (response.success) {
+                    // Update the global pivotData array with fresh data
                     pivotData = response.data;
+                    // Re-render the table with the fresh data
                     renderPivotTable();
+                } else {
+                    $('#pivotTableBody').html('<tr><td colspan="3" class="text-center text-danger">Failed to load data</td></tr>');
                 }
             },
             error: function() {

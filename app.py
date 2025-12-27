@@ -608,9 +608,33 @@ def get_maintenance_request(request_id):
         if not requests:
             return jsonify({'success': False, 'error': 'Request not found'}), 404
         
+        data = requests[0].read()
+        
+        # Auto-populate missing equipment department from equipment record
+        if data.get('equipment_id') and not data.get('equipment_department'):
+            equipment_list = Equipment.browse([data['equipment_id']])
+            if equipment_list:
+                equipment_data = equipment_list[0].read()
+                data['equipment_department'] = equipment_data.get('department_name', '')
+                # Also update other missing equipment fields
+                if not data.get('equipment_name'):
+                    data['equipment_name'] = equipment_data.get('name', '')
+                if not data.get('equipment_category'):
+                    data['equipment_category'] = equipment_data.get('category', '')
+                if not data.get('equipment_location'):
+                    data['equipment_location'] = equipment_data.get('location', '')
+                
+                # Update the record in database to include this data
+                requests[0].write({
+                    'equipment_department': data['equipment_department'],
+                    'equipment_name': data.get('equipment_name'),
+                    'equipment_category': data.get('equipment_category'),
+                    'equipment_location': data.get('equipment_location')
+                })
+        
         return jsonify({
             'success': True,
-            'data': requests[0].read()
+            'data': data
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

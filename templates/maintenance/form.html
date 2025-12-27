@@ -165,16 +165,17 @@
     const requestId = $('#requestId').val();
     
     $(document).ready(function() {
-        loadEquipment();
-        loadTeams();
-        
         // Set default schedule date to today
         const today = new Date().toISOString().split('T')[0];
         $('#scheduleDate').val(today);
         
-        if (requestId) {
-            loadRequest();
-        }
+        // Load equipment and teams first, then load request if editing
+        $.when(loadEquipment(), loadTeams()).done(function() {
+            // Both dropdowns are now populated
+            if (requestId) {
+                loadRequest();
+            }
+        });
         
         $('#maintenanceForm').on('submit', function(e) {
             e.preventDefault();
@@ -183,7 +184,7 @@
     });
     
     function loadEquipment() {
-        $.ajax({
+        return $.ajax({
             url: '/api/equipment?state=active',
             method: 'GET',
             success: function(response) {
@@ -200,7 +201,7 @@
     }
     
     function loadTeams() {
-        $.ajax({
+        return $.ajax({
             url: '/api/teams',
             method: 'GET',
             success: function(response) {

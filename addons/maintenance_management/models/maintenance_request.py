@@ -25,6 +25,7 @@ class MaintenanceRequest(Model):
     equipment_name = fields.Char(string='Equipment Name')
     equipment_category = fields.Char(string='Equipment Category')
     equipment_location = fields.Char(string='Equipment Location')
+    equipment_department = fields.Char(string='Equipment Department')
     
     # Maintenance Type
     maintenance_type = fields.Selection(
