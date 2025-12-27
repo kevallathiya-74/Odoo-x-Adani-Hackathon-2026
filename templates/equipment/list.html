@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Equipment List{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <h2><i class="fas fa-tools"></i> Equipment</h2>
+        <button class="btn btn-primary" onclick="window.location.href='/equipment/form'">
+            <i class="fas fa-plus"></i> New Equipment
+        </button>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <label class="form-label">Status</label>
+                <select class="form-select" id="filterState">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="under_maintenance">Under Maintenance</option>
+                    <option value="scrapped">Scrapped</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Category</label>
+                <select class="form-select" id="filterCategory">
+                    <option value="">All Categories</option>
+                    <option value="machine">Machine</option>
+                    <option value="vehicle">Vehicle</option>
+                    <option value="it_asset">IT Asset</option>
+                    <option value="tool">Tool</option>
+                    <option value="infrastructure">Infrastructure</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Search</label>
+                <input type="text" class="form-control" id="searchInput" placeholder="Search equipment...">
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12">
+                <button class="btn btn-primary" onclick="loadEquipment()">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                <button class="btn btn-secondary" onclick="clearFilters()">
+                    <i class="fas fa-times"></i> Clear
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Equipment Table -->
+<div class="card">
+    <div class="card-body">
+        <div id="tableContainer">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Serial No</th>
+                        <th>Location</th>
+                        <th>Department</th>
+                        <th>Team</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="equipmentTableBody">
+                    <tr>
+                        <td colspan="8" class="text-center">
+                            <div class="spinner-border" role="status"></div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+                Showing <span id="showingCount">0</span> of <span id="totalCount">0</span> records
+            </div>
+            <nav>
+                <ul class="pagination mb-0" id="pagination"></ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentPage = 1;
+    const itemsPerPage = 20;
+    
+    $(document).ready(function() {
+        loadEquipment();
+        
+        // Debounced search
+        $('#searchInput').on('keyup', debounce(function() {
+            currentPage = 1;
+            loadEquipment();
+        }, 500));
+    });
+    
+    function loadEquipment() {
+        const state = $('#filterState').val();
+        const category = $('#filterCategory').val();
+        const search = $('#searchInput').val();
+        
+        const params = new URLSearchParams({
+            limit: itemsPerPage,
+            offset: (currentPage - 1) * itemsPerPage
+        });
+        
+        if (state) params.append('state', state);
+        if (category) params.append('category', category);
+        if (search) params.append('search', search);
+        
+        $.ajax({
+            url: `/api/equipment?${params.toString()}`,
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    renderEquipmentTable(response.data);
+                    updatePagination(response.total, response.offset, response.limit);
+                }
+            },
+            error: function() {
+                showError('equipmentTableBody', 'Failed to load equipment');
+            }
+        });
+    }
+    
+    function renderEquipmentTable(data) {
+        const tbody = $('#equipmentTableBody');
+        tbody.empty();
+        
+        if (data.length === 0) {
+            tbody.append(`
+                <tr>
+                    <td colspan="8" class="text-center">No equipment found</td>
+                </tr>
+            `);
+            return;
+        }
+        
+        data.forEach(equipment => {
+            const row = `
+                <tr>
+                    <td><strong>${equipment.name || 'N/A'}</strong></td>
+                    <td>${formatCategory(equipment.category)}</td>
+                    <td>${equipment.serial_no || 'N/A'}</td>
+                    <td>${equipment.location || 'N/A'}</td>
+                    <td>${equipment.department_name || 'N/A'}</td>
+                    <td>${equipment.maintenance_team_name || 'N/A'}</td>
+                    <td>${getStatusBadge(equipment.state)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="editEquipment('${equipment.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        ${equipment.state === 'active' ? 
+                            `<button class="btn btn-sm btn-danger" onclick="scrapEquipment('${equipment.id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>` : ''}
+                    </td>
+                </tr>
+            `;
+            tbody.append(row);
+        });
+    }
+    
+    function formatCategory(category) {
+        const map = {
+            'machine': 'Machine',
+            'vehicle': 'Vehicle',
+            'it_asset': 'IT Asset',
+            'tool': 'Tool',
+            'infrastructure': 'Infrastructure'
+        };
+        return map[category] || category;
+    }
+    
+    function updatePagination(total, offset, limit) {
+        $('#showingCount').text(Math.min(offset + limit, total));
+        $('#totalCount').text(total);
+        
+        const totalPages = Math.ceil(total / limit);
+        const pagination = $('#pagination');
+        pagination.empty();
+        
+        // Previous button
+        pagination.append(`
+            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;">Previous</a>
+            </li>
+        `);
+        
+        // Page numbers
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                pagination.append(`
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
+                    </li>
+                `);
+            } else if (i === currentPage - 3 || i === currentPage + 3) {
+                pagination.append(`<li class="page-item disabled"><span class="page-link">...</span></li>`);
+            }
+        }
+        
+        // Next button
+        pagination.append(`
+            <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;">Next</a>
+            </li>
+        `);
+    }
+    
+    function changePage(page) {
+        currentPage = page;
+        loadEquipment();
+    }
+    
+    function clearFilters() {
+        $('#filterState').val('');
+        $('#filterCategory').val('');
+        $('#searchInput').val('');
+        currentPage = 1;
+        loadEquipment();
+    }
+    
+    function editEquipment(id) {
+        window.location.href = `/equipment/form/${id}`;
+    }
+    
+    function scrapEquipment(id) {
+        confirmAction('Are you sure you want to scrap this equipment?', function() {
+            $.ajax({
+                url: `/api/equipment/${id}/scrap`,
+                method: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        showToast(response.message || 'Equipment scrapped', 'success');
+                        loadEquipment();
+                    }
+                },
+                error: function() {
+                    showToast('Failed to scrap equipment', 'error');
+                }
+            });
+        });
+    }
+</script>
+{% endblock %}

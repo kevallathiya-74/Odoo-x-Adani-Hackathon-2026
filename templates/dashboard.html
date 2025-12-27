@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Maintenance Management{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="fas fa-tachometer-alt"></i> Dashboard</h2>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <!-- Equipment Stats -->
+    <div class="col-md-3">
+        <div class="card stat-card stat-primary">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-tools"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="totalEquipment">0</h3>
+                    <p>Total Equipment</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card stat-card stat-success">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="activeEquipment">0</h3>
+                    <p>Active Equipment</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card stat-card stat-warning">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-wrench"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="underMaintenance">0</h3>
+                    <p>Under Maintenance</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card stat-card stat-danger">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="overdueRequests">0</h3>
+                    <p>Overdue Requests</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Maintenance Request Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card stat-info">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-plus-circle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="newRequests">0</h3>
+                    <p>New Requests</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card stat-card stat-warning">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-spinner"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="inProgressRequests">0</h3>
+                    <p>In Progress</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card stat-card stat-success">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-check-double"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="completedRequests">0</h3>
+                    <p>Completed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card stat-card stat-primary">
+            <div class="card-body">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="totalTeams">0</h3>
+                    <p>Active Teams</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie"></i> Maintenance by Type</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="maintenanceTypeChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> Maintenance by Status</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="maintenanceStatusChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <a href="/equipment/form" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Equipment
+                </a>
+                <a href="/maintenance/form" class="btn btn-warning">
+                    <i class="fas fa-wrench"></i> New Maintenance Request
+                </a>
+                <a href="/teams" class="btn btn-info">
+                    <i class="fas fa-users"></i> Manage Teams
+                </a>
+                <a href="/reports" class="btn btn-success">
+                    <i class="fas fa-chart-line"></i> View Reports
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Load dashboard statistics
+    function loadDashboardStats() {
+        $.ajax({
+            url: '/api/dashboard/stats',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    const data = response.data;
+                    
+                    // Equipment stats
+                    $('#totalEquipment').text(data.equipment.total);
+                    $('#activeEquipment').text(data.equipment.active);
+                    $('#underMaintenance').text(data.equipment.under_maintenance);
+                    
+                    // Request stats
+                    $('#newRequests').text(data.requests.new);
+                    $('#inProgressRequests').text(data.requests.in_progress);
+                    $('#completedRequests').text(data.requests.completed);
+                    $('#overdueRequests').text(data.requests.overdue);
+                    
+                    // Team stats
+                    $('#totalTeams').text(data.teams.total);
+                    
+                    // Update notification badge
+                    $('#notificationCount').text(data.requests.overdue);
+                }
+            }
+        });
+        
+        // Load chart data
+        $.ajax({
+            url: '/api/reports/charts',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    createCharts(response.data);
+                }
+            }
+        });
+    }
+    
+    // Create charts
+    function createCharts(data) {
+        // Maintenance Type Chart
+        const typeCtx = document.getElementById('maintenanceTypeChart').getContext('2d');
+        new Chart(typeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Corrective', 'Preventive'],
+                datasets: [{
+                    data: [
+                        data.maintenance_by_type.corrective,
+                        data.maintenance_by_type.preventive
+                    ],
+                    backgroundColor: ['#dc3545', '#28a745']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        });
+        
+        // Maintenance Status Chart
+        const statusCtx = document.getElementById('maintenanceStatusChart').getContext('2d');
+        new Chart(statusCtx, {
+            type: 'bar',
+            data: {
+                labels: ['New', 'In Progress', 'Done', 'Cancelled'],
+                datasets: [{
+                    label: 'Requests',
+                    data: [
+                        data.maintenance_by_state.new,
+                        data.maintenance_by_state.in_progress,
+                        data.maintenance_by_state.done,
+                        data.maintenance_by_state.cancelled
+                    ],
+                    backgroundColor: ['#17a2b8', '#ffc107', '#28a745', '#6c757d']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+    
+    // Load on page ready
+    $(document).ready(function() {
+        loadDashboardStats();
+        
+        // Refresh every 30 seconds
+        setInterval(loadDashboardStats, 30000);
+    });
+</script>
+{% endblock %}

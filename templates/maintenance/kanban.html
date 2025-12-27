@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+
+{% block title %}Maintenance Kanban - GearGuard{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <h2><i class="fas fa-th"></i> Maintenance Kanban</h2>
+        <button class="btn btn-primary" onclick="window.location.href='/maintenance/form'">
+            <i class="fas fa-plus"></i> New Request
+        </button>
+    </div>
+</div>
+
+<!-- Kanban Board -->
+<div class="kanban-board">
+    <div class="kanban-column" data-stage="new">
+        <div class="kanban-column-header bg-info">
+            <h5><i class="fas fa-inbox"></i> New</h5>
+            <span class="badge bg-light text-dark" id="count-new">0</span>
+        </div>
+        <div class="kanban-column-body" id="stage-new"></div>
+    </div>
+    
+    <div class="kanban-column" data-stage="in_progress">
+        <div class="kanban-column-header bg-warning">
+            <h5><i class="fas fa-spinner"></i> In Progress</h5>
+            <span class="badge bg-light text-dark" id="count-in_progress">0</span>
+        </div>
+        <div class="kanban-column-body" id="stage-in_progress"></div>
+    </div>
+    
+    <div class="kanban-column" data-stage="repaired">
+        <div class="kanban-column-header bg-success">
+            <h5><i class="fas fa-check-circle"></i> Repaired</h5>
+            <span class="badge bg-light text-dark" id="count-repaired">0</span>
+        </div>
+        <div class="kanban-column-body" id="stage-repaired"></div>
+    </div>
+    
+    <div class="kanban-column" data-stage="scrap">
+        <div class="kanban-column-header bg-danger">
+            <h5><i class="fas fa-trash"></i> Scrap</h5>
+            <span class="badge bg-light text-dark" id="count-scrap">0</span>
+        </div>
+        <div class="kanban-column-body" id="stage-scrap"></div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kanban-board {
+        display: flex;
+        gap: 20px;
+        overflow-x: auto;
+        padding-bottom: 20px;
+    }
+    
+    .kanban-column {
+        flex: 0 0 300px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .kanban-column-header {
+        padding: 15px;
+        color: white;
+        border-radius: 8px 8px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .kanban-column-header h5 {
+        margin: 0;
+        font-size: 16px;
+    }
+    
+    .kanban-column-body {
+        padding: 15px;
+        min-height: 400px;
+    }
+    
+    .kanban-card {
+        background: white;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        cursor: move;
+        transition: all 0.3s;
+    }
+    
+    .kanban-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        transform: translateY(-2px);
+    }
+    
+    .kanban-card.dragging {
+        opacity: 0.5;
+    }
+    
+    .kanban-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .kanban-card-title {
+        font-weight: bold;
+        font-size: 14px;
+        color: #333;
+    }
+    
+    .kanban-card-reference {
+        font-size: 12px;
+        color: #6c757d;
+    }
+    
+    .kanban-card-equipment {
+        font-size: 13px;
+        color: #495057;
+        margin-bottom: 8px;
+    }
+    
+    .kanban-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .kanban-technician {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+    }
+    
+    .technician-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #007bff;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: bold;
+    }
+    
+    .kanban-priority {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 3px;
+    }
+    
+    .priority-0 { background: #d1ecf1; color: #0c5460; }
+    .priority-1 { background: #d4edda; color: #155724; }
+    .priority-2 { background: #fff3cd; color: #856404; }
+    .priority-3 { background: #f8d7da; color: #721c24; }
+    
+    .overdue-badge {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        background: #dc3545;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 10px;
+    }
+    
+    .kanban-card.overdue {
+        border-left: 4px solid #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let kanbanData = {};
+    
+    // Load Kanban data
+    function loadKanbanData() {
+        $.ajax({
+            url: '/api/maintenance/kanban',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    kanbanData = response.data;
+                    renderKanban();
+                }
+            },
+            error: function() {
+                showToast('Error loading kanban data', 'error');
+            }
+        });
+    }
+    
+    // Render Kanban board
+    function renderKanban() {
+        ['new', 'in_progress', 'repaired', 'scrap'].forEach(stage => {
+            const container = $(`#stage-${stage}`);
+            container.empty();
+            
+            const cards = kanbanData[stage] || [];
+            $(`#count-${stage}`).text(cards.length);
+            
+            cards.forEach(card => {
+                container.append(createKanbanCard(card));
+            });
+        });
+        
+        // Initialize drag and drop
+        initDragAndDrop();
+    }
+    
+    // Create Kanban card HTML
+    function createKanbanCard(data) {
+        const priorityLabels = {
+            '0': 'Low',
+            '1': 'Normal',
+            '2': 'High',
+            '3': 'Critical'
+        };
+        
+        const technicianInitials = data.technician_name ?
+            data.technician_name.split(' ').map(n => n[0]).join('').toUpperCase() : '?';
+        
+        const overdueClass = data.is_overdue ? 'overdue' : '';
+        const overdueBadge = data.is_overdue ? 
+            `<span class="overdue-badge"><i class="fas fa-clock"></i> Overdue</span>` : '';
+        
+        return `
+            <div class="kanban-card ${overdueClass}" 
+                 draggable="true" 
+                 data-id="${data.id}"
+                 data-stage="${data.stage}">
+                ${overdueBadge}
+                <div class="kanban-card-header">
+                    <div>
+                        <div class="kanban-card-title">${data.equipment_name || 'N/A'}</div>
+                        <div class="kanban-card-reference">${data.name}</div>
+                    </div>
+                </div>
+                <div class="kanban-card-equipment">
+                    <i class="fas fa-map-marker-alt"></i> ${data.equipment_location || 'N/A'}
+                </div>
+                <div class="kanban-card-equipment">
+                    <i class="fas fa-calendar"></i> ${data.schedule_date || 'N/A'}
+                </div>
+                <div class="kanban-card-footer">
+                    <div class="kanban-technician">
+                        <div class="technician-avatar">${technicianInitials}</div>
+                        <span>${data.technician_name || 'Unassigned'}</span>
+                    </div>
+                    <span class="kanban-priority priority-${data.priority || '1'}">
+                        ${priorityLabels[data.priority] || 'Normal'}
+                    </span>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Initialize drag and drop
+    function initDragAndDrop() {
+        const cards = document.querySelectorAll('.kanban-card');
+        const columns = document.querySelectorAll('.kanban-column-body');
+        
+        cards.forEach(card => {
+            card.addEventListener('dragstart', handleDragStart);
+            card.addEventListener('dragend', handleDragEnd);
+            card.addEventListener('click', handleCardClick);
+        });
+        
+        columns.forEach(column => {
+            column.addEventListener('dragover', handleDragOver);
+            column.addEventListener('drop', handleDrop);
+            column.addEventListener('dragenter', handleDragEnter);
+            column.addEventListener('dragleave', handleDragLeave);
+        });
+    }
+    
+    let draggedElement = null;
+    
+    function handleDragStart(e) {
+        draggedElement = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', this.innerHTML);
+    }
+    
+    function handleDragEnd(e) {
+        this.classList.remove('dragging');
+    }
+    
+    function handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault();
+        }
+        e.dataTransfer.dropEffect = 'move';
+        return false;
+    }
+    
+    function handleDragEnter(e) {
+        this.classList.add('drag-over');
+    }
+    
+    function handleDragLeave(e) {
+        this.classList.remove('drag-over');
+    }
+    
+    function handleDrop(e) {
+        if (e.stopPropagation) {
+            e.stopPropagation();
+        }
+        
+        this.classList.remove('drag-over');
+        
+        if (draggedElement) {
+            const newStage = this.id.replace('stage-', '');
+            const cardId = draggedElement.dataset.id;
+            const oldStage = draggedElement.dataset.stage;
+            
+            if (newStage !== oldStage) {
+                // Update via API
+                updateCardStage(cardId, newStage);
+            }
+        }
+        
+        return false;
+    }
+    
+    function handleCardClick(e) {
+        if (!e.target.closest('.kanban-card-footer')) {
+            const cardId = this.dataset.id;
+            window.location.href = `/maintenance/form/${cardId}`;
+        }
+    }
+    
+    // Update card stage via API
+    function updateCardStage(cardId, newStage) {
+        $.ajax({
+            url: `/api/maintenance/${cardId}`,
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ stage: newStage }),
+            success: function(response) {
+                if (response.success) {
+                    showToast('Status updated successfully', 'success');
+                    loadKanbanData();
+                }
+            },
+            error: function() {
+                showToast('Failed to update status', 'error');
+                loadKanbanData();
+            }
+        });
+    }
+    
+    // Load on page ready
+    $(document).ready(function() {
+        loadKanbanData();
+        
+        // Refresh every 30 seconds
+        setInterval(loadKanbanData, 30000);
+    });
+</script>
+{% endblock %}

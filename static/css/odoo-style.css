@@ -1,0 +1,300 @@
+/* Odoo-style CSS for Maintenance Management System */
+
+:root {
+    --odoo-primary: #714B67;
+    --odoo-secondary: #875A7B;
+    --odoo-success: #28a745;
+    --odoo-danger: #dc3545;
+    --odoo-warning: #ffc107;
+    --odoo-info: #17a2b8;
+    --odoo-light: #f8f9fa;
+    --odoo-dark: #343a40;
+}
+
+/* General Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+}
+
+/* Navbar Odoo Style */
+.bg-odoo {
+    background-color: var(--odoo-primary) !important;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.navbar-nav .nav-link {
+    padding: 0.5rem 1rem;
+    transition: background-color 0.3s;
+}
+
+.navbar-nav .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+/* Statistics Cards */
+.stat-card {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card .card-body {
+    display: flex;
+    align-items: center;
+    padding: 1.5rem;
+}
+
+.stat-icon {
+    font-size: 3rem;
+    margin-right: 1rem;
+    opacity: 0.8;
+}
+
+.stat-content h3 {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0;
+}
+
+.stat-content p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* Stat Card Colors */
+.stat-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.stat-success { background: linear-gradient(135deg, #84fab0 0%, #28a745 100%); color: white; }
+.stat-warning { background: linear-gradient(135deg, #ffd89b 0%, #ffc107 100%); color: white; }
+.stat-danger { background: linear-gradient(135deg, #f093fb 0%, #dc3545 100%); color: white; }
+.stat-info { background: linear-gradient(135deg, #4facfe 0%, #17a2b8 100%); color: white; }
+
+.stat-primary .stat-content p,
+.stat-success .stat-content p,
+.stat-warning .stat-content p,
+.stat-danger .stat-content p,
+.stat-info .stat-content p {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: white;
+    border-bottom: 2px solid #e9ecef;
+    font-weight: 600;
+    padding: 1rem 1.5rem;
+}
+
+.card-header h5 {
+    margin: 0;
+    color: var(--odoo-primary);
+}
+
+/* Buttons */
+.btn {
+    border-radius: 6px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-primary {
+    background-color: var(--odoo-primary);
+    border-color: var(--odoo-primary);
+}
+
+.btn-primary:hover {
+    background-color: var(--odoo-secondary);
+    border-color: var(--odoo-secondary);
+}
+
+/* Forms */
+.form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.form-control, .form-select {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    padding: 0.6rem 1rem;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--odoo-primary);
+    box-shadow: 0 0 0 0.2rem rgba(113, 75, 103, 0.25);
+}
+
+/* Tables */
+.table {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table thead th {
+    background-color: var(--odoo-primary);
+    color: white;
+    font-weight: 600;
+    border: none;
+    padding: 1rem;
+}
+
+.table tbody tr {
+    transition: background-color 0.3s;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.table tbody td {
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+}
+
+/* Badges */
+.badge {
+    padding: 0.35rem 0.65rem;
+    font-weight: 500;
+    border-radius: 4px;
+}
+
+/* Toast Notifications */
+.toast {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.toast-header {
+    background-color: var(--odoo-primary);
+    color: white;
+    border-radius: 8px 8px 0 0;
+}
+
+/* Modals */
+.modal-content {
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    background-color: var(--odoo-primary);
+    color: white;
+    border-radius: 8px 8px 0 0;
+}
+
+.modal-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+/* Loading Spinner */
+.spinner-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.3rem;
+    color: var(--odoo-primary);
+}
+
+/* Smart Button */
+.smart-button {
+    background: white;
+    border: 2px solid var(--odoo-primary);
+    color: var(--odoo-primary);
+    padding: 1rem;
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.smart-button:hover {
+    background: var(--odoo-primary);
+    color: white;
+}
+
+.smart-button .smart-button-count {
+    font-size: 2rem;
+    font-weight: bold;
+    display: block;
+}
+
+.smart-button .smart-button-label {
+    font-size: 0.9rem;
+    display: block;
+    margin-top: 0.5rem;
+}
+
+/* Status badges */
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-new { background-color: #d1ecf1; color: #0c5460; }
+.status-in-progress { background-color: #fff3cd; color: #856404; }
+.status-done { background-color: #d4edda; color: #155724; }
+.status-cancelled { background-color: #f8d7da; color: #721c24; }
+
+/* Priority badges */
+.priority-low { background-color: #d1ecf1; color: #0c5460; }
+.priority-normal { background-color: #d4edda; color: #155724; }
+.priority-high { background-color: #fff3cd; color: #856404; }
+.priority-critical { background-color: #f8d7da; color: #721c24; }
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .stat-card .card-body {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .stat-icon {
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .navbar, .btn, .card-header { display: none; }
+    .card { box-shadow: none; border: 1px solid #dee2e6; }
+}

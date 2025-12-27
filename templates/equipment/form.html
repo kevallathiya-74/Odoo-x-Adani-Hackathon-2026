@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}Equipment Form{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <h2><i class="fas fa-tools"></i> <span id="formTitle">New Equipment</span></h2>
+        <button class="btn btn-secondary" onclick="window.history.back()">
+            <i class="fas fa-arrow-left"></i> Back
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form id="equipmentForm">
+            <div class="row">
+                <!-- Basic Information -->
+                <div class="col-md-6">
+                    <h5 class="mb-3">Basic Information</h5>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Equipment Name *</label>
+                        <input type="text" class="form-control" id="name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Category *</label>
+                        <select class="form-select" id="category" required>
+                            <option value="machine">Machine</option>
+                            <option value="vehicle">Vehicle</option>
+                            <option value="it_asset">IT Asset</option>
+                            <option value="tool">Tool</option>
+                            <option value="infrastructure">Infrastructure</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Serial Number</label>
+                        <input type="text" class="form-control" id="serial_no">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Model</label>
+                        <input type="text" class="form-control" id="model">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Manufacturer</label>
+                        <input type="text" class="form-control" id="manufacturer">
+                    </div>
+                </div>
+                
+                <!-- Assignment & Location -->
+                <div class="col-md-6">
+                    <h5 class="mb-3">Assignment & Location</h5>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Department</label>
+                        <input type="text" class="form-control" id="department_name">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Responsible Person</label>
+                        <input type="text" class="form-control" id="responsible_name">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Location *</label>
+                        <input type="text" class="form-control" id="location" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Maintenance Team Name *</label>
+                        <input type="text" class="form-control" id="maintenance_team_name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Default Technician</label>
+                        <input type="text" class="form-control" id="technician_name">
+                    </div>
+                </div>
+            </div>
+            
+            <hr class="my-4">
+            
+            <div class="row">
+                <!-- Warranty & Purchase -->
+                <div class="col-md-6">
+                    <h5 class="mb-3">Warranty & Purchase</h5>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Cost</label>
+                        <input type="number" class="form-control" id="cost" step="0.01">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Purchase Date</label>
+                        <input type="date" class="form-control" id="purchase_date">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Vendor</label>
+                        <input type="text" class="form-control" id="vendor">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Warranty Start Date</label>
+                        <input type="date" class="form-control" id="warranty_start">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Warranty Duration (months)</label>
+                        <input type="number" class="form-control" id="warranty_duration">
+                    </div>
+                </div>
+                
+                <!-- Additional Details -->
+                <div class="col-md-6">
+                    <h5 class="mb-3">Additional Details</h5>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="state">
+                            <option value="active">Active</option>
+                            <option value="under_maintenance">Under Maintenance</option>
+                            <option value="scrapped">Scrapped</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Maintenance Interval (days)</label>
+                        <input type="number" class="form-control" id="maintenance_interval" value="90">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Technical Specifications</label>
+                        <textarea class="form-control" id="specifications" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" rows="3"></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <hr class="my-4">
+            
+            <div class="text-end">
+                <button type="button" class="btn btn-secondary" onclick="window.history.back()">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Smart Button for Maintenance (only on edit) -->
+<div id="maintenanceSection" style="display: none;">
+    <div class="card mt-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="smart-button" onclick="viewMaintenanceHistory()">
+                        <span class="smart-button-count" id="maintenanceCount">0</span>
+                        <span class="smart-button-label">Maintenance Requests</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const equipmentId = '{{ equipment_id }}';
+    let isEditMode = equipmentId && equipmentId !== 'None';
+    
+    $(document).ready(function() {
+        if (isEditMode) {
+            $('#formTitle').text('Edit Equipment');
+            loadEquipment();
+        }
+    });
+    
+    function loadEquipment() {
+        $.ajax({
+            url: `/api/equipment/${equipmentId}`,
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    const data = response.data;
+                    
+                    // Fill form fields
+                    Object.keys(data).forEach(key => {
+                        const input = $(`#${key}`);
+                        if (input.length) {
+                            input.val(data[key]);
+                        }
+                    });
+                    
+                    // Show maintenance section
+                    $('#maintenanceSection').show();
+                    $('#maintenanceCount').text(data.maintenance_count || 0);
+                }
+            },
+            error: function() {
+                showToast('Failed to load equipment', 'error');
+            }
+        });
+    }
+    
+    $('#equipmentForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        // Collect form data
+        const formData = {
+            name: $('#name').val(),
+            category: $('#category').val(),
+            serial_no: $('#serial_no').val(),
+            model: $('#model').val(),
+            manufacturer: $('#manufacturer').val(),
+            department_name: $('#department_name').val(),
+            responsible_name: $('#responsible_name').val(),
+            location: $('#location').val(),
+            maintenance_team_name: $('#maintenance_team_name').val(),
+            technician_name: $('#technician_name').val(),
+            cost: parseFloat($('#cost').val()) || 0,
+            purchase_date: $('#purchase_date').val(),
+            vendor: $('#vendor').val(),
+            warranty_start: $('#warranty_start').val(),
+            warranty_duration: parseInt($('#warranty_duration').val()) || 0,
+            state: $('#state').val(),
+            maintenance_interval: parseInt($('#maintenance_interval').val()) || 90,
+            specifications: $('#specifications').val(),
+            notes: $('#notes').val()
+        };
+        
+        const url = isEditMode ? `/api/equipment/${equipmentId}` : '/api/equipment';
+        const method = isEditMode ? 'PUT' : 'POST';
+        
+        $.ajax({
+            url: url,
+            method: method,
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                if (response.success) {
+                    showToast(response.message || 'Equipment saved successfully', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/equipment';
+                    }, 1500);
+                }
+            },
+            error: function(xhr) {
+                const error = xhr.responseJSON?.error || 'Failed to save equipment';
+                showToast(error, 'error');
+            }
+        });
+    });
+    
+    function viewMaintenanceHistory() {
+        window.location.href = `/maintenance?equipment_id=${equipmentId}`;
+    }
+</script>
+{% endblock %}
