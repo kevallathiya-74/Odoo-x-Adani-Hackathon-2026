@@ -228,6 +228,12 @@
                     populateForm(response.data);
                     $('#formTitle').text('Edit Maintenance Request');
                     $('#editSidebar').show();
+                    
+                    // Make form read-only for terminal states
+                    if (response.data.state === 'done' || response.data.state === 'cancelled') {
+                        $('#maintenanceForm input, #maintenanceForm select, #maintenanceForm textarea').prop('disabled', true);
+                        $('.btn-primary[type="submit"]').hide();
+                    }
                 }
             },
             error: function() {
@@ -282,6 +288,9 @@
         const actions = $('#stateActions');
         actions.empty();
         
+        // Update status badge immediately
+        updateStatusBadge(state);
+        
         if (state === 'new') {
             actions.append(`
                 <button class="btn btn-success w-100 mb-2" onclick="changeState('in_progress')">
@@ -331,6 +340,10 @@
         
         confirmAction(confirmMsg, function() {
             console.log('User confirmed, sending API request...');
+            
+            // Show loading indicator
+            showToast('Updating...', 'info');
+            
             $.ajax({
                 url: `/api/maintenance/${requestId}/state`,
                 method: 'POST',
@@ -340,8 +353,19 @@
                     console.log('API response:', response);
                     if (response.success) {
                         showToast(response.message || 'State updated', 'success');
-                        // Reload to update UI with new state
-                        loadRequest();
+                        
+                        // Fast update: directly update UI without full reload
+                        populateForm(response.data);
+                        generateStateActions(response.data.state);
+                        
+                        // Update status badge in header
+                        updateStatusBadge(response.data.state);
+                        
+                        // Disable form for terminal states
+                        if (newState === 'done' || newState === 'cancelled') {
+                            $('#maintenanceForm input, #maintenanceForm select, #maintenanceForm textarea').prop('disabled', true);
+                            $('.btn-primary[type="submit"]').hide();
+                        }
                     } else {
                         showToast(response.error || 'Failed to update state', 'error');
                     }
@@ -411,6 +435,16 @@
                 showToast(error, 'error');
             }
         });
+    }
+    
+    function updateStatusBadge(state) {
+        const stateLabels = {
+            'new': '<span class="badge bg-info">New</span>',
+            'in_progress': '<span class="badge bg-warning text-dark">In Progress</span>',
+            'done': '<span class="badge bg-success">Done</span>',
+            'cancelled': '<span class="badge bg-secondary">Cancelled</span>'
+        };
+        $('#currentStatus').html(stateLabels[state] || 'Unknown');
     }
 </script>
 {% endblock %}

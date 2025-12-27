@@ -306,6 +306,22 @@ def scrap_equipment(equipment_id):
         return jsonify({'success': False, 'error': str(e)}), 400
 
 # ============================================================================
+# PORTAL USER ROUTES
+# ============================================================================
+
+@app.route('/api/portal-users', methods=['GET'])
+def list_portal_users():
+    """API: List all portal users (for team member selection)"""
+    try:
+        users = PortalUser.search([('active', '=', True)])
+        return jsonify({
+            'success': True,
+            'data': [user.read() for user in users]
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ============================================================================
 # MAINTENANCE TEAM ROUTES
 # ============================================================================
 
