@@ -96,8 +96,14 @@ class Equipment(Model):
         # Auto-generate equipment code if not provided
         if 'name' in vals and 'serial_no' not in vals:
             vals['serial_no'] = cls._generate_serial_no(vals['name'])
-        
-        # Calculate warranty end date if duration provided
+                # Ensure unique serial number
+        if 'serial_no' in vals:
+            existing = cls.search([('serial_no', '=', vals['serial_no'])])
+            if existing:
+                # Make it unique
+                import random
+                vals['serial_no'] = f\"{vals['serial_no']}-{random.randint(1000, 9999)}\"
+                # Calculate warranty end date if duration provided
         if 'warranty_start' in vals and 'warranty_duration' in vals:
             from dateutil.relativedelta import relativedelta
             start_date = datetime.strptime(vals['warranty_start'], '%Y-%m-%d')
@@ -133,13 +139,17 @@ class Equipment(Model):
         
         # Cancel all pending maintenance requests
         from .maintenance_request import MaintenanceRequest
+        from bson import ObjectId
+        
+        # Try both string and ObjectId formats
+        equipment_id_str = str(self._id)
         pending_requests = MaintenanceRequest.search([
-            ('equipment_id', '=', str(self._id)),
+            ('equipment_id', '=', equipment_id_str),
             ('state', 'in', ['new', 'in_progress'])
         ])
         
         for request in pending_requests:
-            request.write({'state': 'cancelled'})
+            request.write({'state': 'cancelled', 'stage': 'scrap'})
         
         return True
     
@@ -152,8 +162,9 @@ class Equipment(Model):
         """Get maintenance history for this equipment"""
         from .maintenance_request import MaintenanceRequest
         
+        equipment_id_str = str(self._id)
         return MaintenanceRequest.search(
-            domain=[('equipment_id', '=', str(self._id))],
+            domain=[('equipment_id', '=', equipment_id_str)],
             order='create_date DESC',
             limit=limit
         )
@@ -162,16 +173,18 @@ class Equipment(Model):
         """Update maintenance statistics"""
         from .maintenance_request import MaintenanceRequest
         
+        equipment_id_str = str(self._id)
+        
         # Count total maintenance
         count = MaintenanceRequest.search_count([
-            ('equipment_id', '=', str(self._id)),
+            ('equipment_id', '=', equipment_id_str),
             ('state', '=', 'done')
         ])
         
         # Get last maintenance date
         last_maintenance = MaintenanceRequest.search(
             domain=[
-                ('equipment_id', '=', str(self._id)),
+                ('equipment_id', '=', equipment_id_str),
                 ('state', '=', 'done')
             ],
             order='schedule_date DESC',

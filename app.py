@@ -167,6 +167,17 @@ def create_equipment():
     """API: Create equipment"""
     try:
         data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['name', 'category', 'location', 'maintenance_team_id']
+        missing_fields = [f for f in required_fields if f not in data or not data[f]]
+        
+        if missing_fields:
+            return jsonify({
+                'success': False,
+                'error': f\"Missing required fields: {', '.join(missing_fields)}\"
+            }), 400
+        
         equipment = Equipment.create(data)
         
         return jsonify({
@@ -174,8 +185,10 @@ def create_equipment():
             'data': equipment.read(),
             'message': 'Equipment created successfully'
         }), 201
-    except Exception as e:
+    except ValueError as e:
         return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Server error: {str(e)}'}), 500
 
 @app.route('/api/equipment/<equipment_id>', methods=['PUT'])
 def update_equipment(equipment_id):
@@ -415,6 +428,32 @@ def create_maintenance_request():
     """API: Create maintenance request"""
     try:
         data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['equipment_id', 'maintenance_type', 'description', 'schedule_date']
+        missing_fields = [f for f in required_fields if f not in data or not data[f]]
+        
+        if missing_fields:
+            return jsonify({
+                'success': False,
+                'error': f\"Missing required fields: {', '.join(missing_fields)}\"
+            }), 400
+        
+        # Validate equipment exists
+        equipment = Equipment.browse([data['equipment_id']])
+        if not equipment:
+            return jsonify({
+                'success': False,
+                'error': 'Equipment not found'
+            }), 404
+        
+        # Check equipment is not scrapped
+        if equipment[0].state == 'scrapped':
+            return jsonify({
+                'success': False,
+                'error': 'Cannot create maintenance request for scrapped equipment'
+            }), 400
+        
         maintenance_request = MaintenanceRequest.create(data)
         
         return jsonify({
@@ -422,8 +461,10 @@ def create_maintenance_request():
             'data': maintenance_request.read(),
             'message': 'Maintenance request created successfully'
         }), 201
-    except Exception as e:
+    except ValueError as e:
         return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Server error: {str(e)}'}), 500
 
 @app.route('/api/maintenance/<request_id>', methods=['GET'])
 def get_maintenance_request(request_id):

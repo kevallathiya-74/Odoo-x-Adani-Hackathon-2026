@@ -179,8 +179,24 @@ class MaintenanceRequest(Model):
     
     def write(self, vals):
         """Override write to add business logic"""
-        # State change logic
+        # Validate state transition
         if 'state' in vals:
+            current_state = self.state if hasattr(self, 'state') else 'new'
+            new_state = vals['state']
+            
+            # Prevent invalid state transitions
+            valid_transitions = {
+                'new': ['in_progress', 'cancelled'],
+                'in_progress': ['done', 'cancelled'],
+                'done': [],  # Cannot transition from done
+                'cancelled': []  # Cannot transition from cancelled
+            }
+            
+            if current_state in valid_transitions:
+                if new_state not in valid_transitions[current_state] and new_state != current_state:
+                    # Allow if it's a force update or stage change
+                    if 'stage' not in vals:
+                        raise ValueError(f\"Invalid state transition: {current_state} -> {new_state}\")\n        \n        # State change logic\n        if 'state' in vals:
             # Starting work
             if vals['state'] == 'in_progress' and self.state == 'new':
                 vals['start_date'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -240,8 +256,11 @@ class MaintenanceRequest(Model):
     @staticmethod
     def _generate_reference():
         """Generate unique reference number"""
+        from datetime import datetime
+        import random
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        return f"MNT-{timestamp}"
+        random_suffix = random.randint(100, 999)
+        return f\"MNT-{timestamp}-{random_suffix}\"
     
     @staticmethod
     def _get_equipment_details(equipment_id):
@@ -279,6 +298,15 @@ class MaintenanceRequest(Model):
     def _update_equipment_status(equipment_id, status):
         """Update equipment status"""
         from .equipment import Equipment
+        from bson import ObjectId
+        
+        # Convert string to ObjectId if needed
+        if isinstance(equipment_id, str) and len(equipment_id) == 24:
+            try:
+                equipment_id = ObjectId(equipment_id)
+            except:
+                pass
+        
         equipment_list = Equipment.browse([equipment_id])
         if equipment_list:
             equipment_list[0].write({'state': status})

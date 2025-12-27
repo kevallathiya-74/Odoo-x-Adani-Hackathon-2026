@@ -156,7 +156,7 @@ class Model(metaclass=ModelMeta):
         """
         Browse records by ID(s)
         Args:
-            ids: Single ID or list of IDs
+            ids: Single ID or list of IDs (can be string or ObjectId)
         Returns:
             List of model instances
         """
@@ -167,7 +167,22 @@ class Model(metaclass=ModelMeta):
             ids = [ids]
         
         collection = cls._get_collection()
-        object_ids = [ObjectId(id_) if isinstance(id_, str) else id_ for id_ in ids]
+        object_ids = []
+        
+        for id_ in ids:
+            if isinstance(id_, str):
+                # Try to convert string to ObjectId
+                try:
+                    if len(id_) == 24:  # MongoDB ObjectId length
+                        object_ids.append(ObjectId(id_))
+                    else:
+                        object_ids.append(id_)
+                except:
+                    object_ids.append(id_)
+            elif isinstance(id_, ObjectId):
+                object_ids.append(id_)
+            else:
+                object_ids.append(id_)
         
         records = collection.find({'_id': {'$in': object_ids}})
         return [cls(record) for record in records]

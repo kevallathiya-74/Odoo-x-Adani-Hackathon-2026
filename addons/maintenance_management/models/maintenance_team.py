@@ -65,6 +65,18 @@ class MaintenanceTeam(Model):
         if 'name' in vals and 'code' not in vals:
             vals['code'] = cls._generate_team_code(vals['name'])
         
+        # Validate unique code
+        if 'code' in vals:
+            existing = cls.search([('code', '=', vals['code'])])
+            if existing:
+                # Make code unique by appending number
+                counter = 1
+                original_code = vals['code']
+                while existing:
+                    vals['code'] = f\"{original_code}-{counter}\"
+                    existing = cls.search([('code', '=', vals['code'])])
+                    counter += 1
+        
         return super().create(vals)
     
     @staticmethod
