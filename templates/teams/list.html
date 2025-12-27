@@ -158,11 +158,25 @@
     
     $(document).ready(function() {
         loadTeams();
+        
+        // Ensure modal state is clean when shown
+        $('#teamModal').on('show.bs.modal', function() {
+            const editId = $(this).data('edit-id');
+            // Only clear if creating new team (not editing)
+            if (!editId) {
+                const select = $('#teamMembers');
+                const selectElement = document.getElementById('teamMembers');
+                select.val(null);
+                select.find('option').prop('selected', false);
+                selectElement.selectedIndex = -1;
+                select.trigger('change');
+            }
+        });
     });
     
     function loadAvailableUsers() {
         // Load portal users who can be team members
-        $.ajax({
+        return $.ajax({
             url: '/api/portal-users',
             method: 'GET',
             success: function(response) {
@@ -179,10 +193,25 @@
     
     function populateMemberSelect() {
         const select = $('#teamMembers');
-        select.empty();
+        const selectElement = document.getElementById('teamMembers');
+        
+        select.empty(); // Clear all options
+        select.val([]); // Clear any selected values
+        selectElement.selectedIndex = -1; // Reset DOM selection
+        
         availableUsers.forEach(user => {
-            select.append(`<option value="${user.id}">${user.name} (${user.email})</option>`);
+            // Explicitly create option without 'selected' attribute
+            const option = $('<option></option>');
+            option.val(user.id);
+            option.text(`${user.name} (${user.email})`);
+            option.prop('selected', false); // Ensure not selected
+            select.append(option);
         });
+        
+        // Force deselect all after population
+        select.val(null);
+        select.find('option').prop('selected', false);
+        selectElement.selectedIndex = -1;
     }
     
     function loadTeams() {
@@ -258,7 +287,24 @@
     function createTeam() {
         $('#teamForm')[0].reset();
         $('#teamModal').data('edit-id', null);
-        loadAvailableUsers();
+        
+        // Aggressively clear members dropdown
+        const select = $('#teamMembers');
+        select.empty();
+        select.val(null);
+        select.find('option').prop('selected', false);
+        
+        // Nuclear option: reset selectedIndex on raw DOM element
+        const selectElement = document.getElementById('teamMembers');
+        selectElement.selectedIndex = -1;
+        
+        // Load users and explicitly clear selection after population
+        loadAvailableUsers().then(() => {
+            select.val(null);
+            select.find('option').prop('selected', false);
+            selectElement.selectedIndex = -1;
+        });
+        
         $('#teamModal').modal('show');
     }
     
@@ -275,13 +321,17 @@
         $('#teamDescription').val(team.description || '');
         $('#teamActive').prop('checked', team.active);
         
-        // Load users and select team members
-        loadAvailableUsers();
-        setTimeout(() => {
+        // Clear members dropdown to prevent leakage from previous edits
+        $('#teamMembers').empty().val([]);
+        
+        // Load users and select ONLY this team's members
+        loadAvailableUsers().then(() => {
             if (team.member_ids && team.member_ids.length > 0) {
                 $('#teamMembers').val(team.member_ids);
+            } else {
+                $('#teamMembers').val([]); // Explicitly set empty array if no members
             }
-        }, 500);
+        });
         
         $('#teamModal').data('edit-id', id).modal('show');
     }

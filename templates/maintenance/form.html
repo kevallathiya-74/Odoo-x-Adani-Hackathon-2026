@@ -184,8 +184,12 @@
     });
     
     function loadEquipment() {
+        // When editing, load ALL equipment to ensure we can show scrapped/inactive equipment
+        // When creating new, only show active equipment
+        const filterParam = requestId ? '' : '?state=active';
+        
         return $.ajax({
-            url: '/api/equipment?state=active',
+            url: `/api/equipment${filterParam}`,
             method: 'GET',
             success: function(response) {
                 if (response.success) {
@@ -193,7 +197,8 @@
                     const select = $('#equipment');
                     select.empty().append('<option value="">Select Equipment</option>');
                     response.data.forEach(eq => {
-                        select.append(`<option value="${eq.id}">${eq.name} (${eq.serial_no || 'N/A'})</option>`);
+                        const stateLabel = eq.state !== 'active' ? ` [${eq.state}]` : '';
+                        select.append(`<option value="${eq.id}">${eq.name}${stateLabel} (${eq.serial_no || 'N/A'})</option>`);
                     });
                 }
             }
