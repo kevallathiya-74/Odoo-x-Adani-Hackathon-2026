@@ -1068,4 +1068,13 @@ if __name__ == '__main__':
     print("✓ Server ready!")
     print("=" * 60)
     
-    app.run(host=Config.HOST, port=Config.PORT, debug=Config.DEBUG)
+    # Windows-safe configuration to prevent WinError 10038
+    # Use stat reloader instead of watchdog to avoid socket threading issues
+    app.run(
+        host=Config.HOST, 
+        port=Config.PORT, 
+        debug=Config.DEBUG,
+        use_reloader=True,
+        reloader_type='stat',  # Use stat instead of watchdog (Windows-safe)
+        threaded=True
+    )
