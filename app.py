@@ -677,6 +677,22 @@ def update_maintenance_request(request_id):
         
         maintenance_request = requests[0]
         data = request.get_json()
+        
+        # ODOO STANDARD: Check if stage is changing to 'scrap'
+        if 'stage' in data and data['stage'] == 'scrap':
+            # Update equipment to scrapped state
+            if maintenance_request.equipment_id:
+                equipment = Equipment.browse([maintenance_request.equipment_id])
+                if equipment:
+                    equipment.write({
+                        'state': 'scrapped',
+                        'last_maintenance_date': datetime.now().strftime('%Y-%m-%d')
+                    })
+                    print(f"[SCRAP WORKFLOW] Equipment {maintenance_request.equipment_id} marked as scrapped")
+            
+            # Update maintenance request state to cancelled (scrapped workflow)
+            data['state'] = 'cancelled'
+        
         maintenance_request.write(data)
         
         return jsonify({
@@ -685,6 +701,7 @@ def update_maintenance_request(request_id):
             'message': 'Request updated successfully'
         })
     except Exception as e:
+        print(f"[ERROR] Update maintenance request: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/api/maintenance/<request_id>/start', methods=['POST'])

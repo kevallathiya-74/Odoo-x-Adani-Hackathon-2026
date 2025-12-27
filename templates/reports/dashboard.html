@@ -304,7 +304,6 @@
             data: {
                 labels: ['New', 'In Progress', 'Done', 'Cancelled'],
                 datasets: [{
-                    label: 'Requests',
                     data: [data.new, data.in_progress, data.done, data.cancelled],
                     backgroundColor: ['#17a2b8', '#ffc107', '#28a745', '#6c757d']
                 }]
@@ -313,7 +312,19 @@
                 responsive: true,
                 maintainAspectRatio: true,
                 plugins: {
-                    legend: { display: false }
+                    legend: { 
+                        display: false 
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                return context[0].label;
+                            },
+                            label: function(context) {
+                                return context.parsed.y;
+                            }
+                        }
+                    }
                 },
                 scales: {
                     y: { beginAtZero: true }

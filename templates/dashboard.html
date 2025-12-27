@@ -254,7 +254,6 @@
             data: {
                 labels: ['New', 'In Progress', 'Done', 'Cancelled'],
                 datasets: [{
-                    label: 'Requests',
                     data: [
                         data.maintenance_by_state.new,
                         data.maintenance_by_state.in_progress,
@@ -267,6 +266,21 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
+                plugins: {
+                    legend: { 
+                        display: false 
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(context) {
+                                return context[0].label;
+                            },
+                            label: function(context) {
+                                return context.parsed.y;
+                            }
+                        }
+                    }
+                },
                 scales: {
                     y: {
                         beginAtZero: true

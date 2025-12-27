@@ -126,10 +126,36 @@
 {% block extra_js %}
 <script>
     let teams = [];
+    let availableUsers = [];
     
     $(document).ready(function() {
         loadTeams();
     });
+    
+    function loadAvailableUsers() {
+        // Load portal users who can be team members
+        $.ajax({
+            url: '/api/portal-users',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    availableUsers = response.data;
+                    populateMemberSelect();
+                }
+            },
+            error: function() {
+                console.error('Failed to load users');
+            }
+        });
+    }
+    
+    function populateMemberSelect() {
+        const select = $('#teamMembers');
+        select.empty();
+        availableUsers.forEach(user => {
+            select.append(`<option value="${user.id}">${user.name} (${user.email})</option>`);
+        });
+    }
     
     function loadTeams() {
         // Show loading spinner
