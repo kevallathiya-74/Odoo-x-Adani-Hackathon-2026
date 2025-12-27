@@ -347,14 +347,18 @@
     }
     
     function createTeamChart(data) {
+        const teamWorkload = data.team_workload || {};
+        const labels = Object.keys(teamWorkload);
+        const values = Object.values(teamWorkload);
+        
         const ctx = document.getElementById('teamChart').getContext('2d');
         charts.team = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['Teams'],
+                labels: labels.length > 0 ? labels : ['No Data'],
                 datasets: [{
-                    label: 'Active Teams',
-                    data: [data.teams?.total || 0],
+                    label: 'Active Requests',
+                    data: values.length > 0 ? values : [0],
                     backgroundColor: '#007bff'
                 }]
             },
@@ -362,10 +366,13 @@
                 responsive: true,
                 maintainAspectRatio: true,
                 plugins: {
-                    legend: { display: false }
+                    legend: { display: true }
                 },
                 scales: {
-                    y: { beginAtZero: true }
+                    y: { 
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
                 }
             }
         });

@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Maintenance Teams - GearGuard{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-6">
+        <h2><i class="fas fa-users"></i> Maintenance Teams</h2>
+    </div>
+    <div class="col-md-6 text-end">
+        <button class="btn btn-primary" onclick="createTeam()">
+            <i class="fas fa-plus"></i> New Team
+        </button>
+    </div>
+</div>
+
+<!-- Teams List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Team Name</th>
+                                <th>Code</th>
+                                <th>Specialization</th>
+                                <th>Team Leader</th>
+                                <th>Contact</th>
+                                <th>Members</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teamTableBody">
+                            <tr>
+                                <td colspan="8" class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Team Modal -->
+<div class="modal fade" id="teamModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Team Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="teamForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Team Name *</label>
+                            <input type="text" class="form-control" id="teamName" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Team Code *</label>
+                            <input type="text" class="form-control" id="teamCode" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Specialization *</label>
+                            <select class="form-select" id="teamSpecialization" required>
+                                <option value="">Select...</option>
+                                <option value="mechanical">Mechanical</option>
+                                <option value="electrical">Electrical</option>
+                                <option value="it">IT/Software</option>
+                                <option value="civil">Civil/Infrastructure</option>
+                                <option value="general">General Maintenance</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Team Leader Name</label>
+                            <input type="text" class="form-control" id="teamLeaderName">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="teamEmail">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Phone</label>
+                            <input type="tel" class="form-control" id="teamPhone">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="teamDescription" rows="3"></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="teamActive" checked>
+                        <label class="form-check-label" for="teamActive">Active</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveTeam()">Save Team</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let teams = [];
+    
+    $(document).ready(function() {
+        loadTeams();
+    });
+    
+    function loadTeams() {
+        $.ajax({
+            url: '/api/teams',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    teams = response.data;
+                    renderTeams();
+                }
+            },
+            error: function() {
+                showToast('Error loading teams', 'error');
+                $('#teamTableBody').html('<tr><td colspan="8" class="text-center text-danger">Failed to load teams</td></tr>');
+            }
+        });
+    }
+    
+    function renderTeams() {
+        const tbody = $('#teamTableBody');
+        tbody.empty();
+        
+        if (teams.length === 0) {
+            tbody.append('<tr><td colspan="8" class="text-center text-muted">No teams found</td></tr>');
+            return;
+        }
+        
+        const specializationLabels = {
+            'mechanical': '<span class="badge bg-primary">Mechanical</span>',
+            'electrical': '<span class="badge bg-warning">Electrical</span>',
+            'it': '<span class="badge bg-info">IT/Software</span>',
+            'civil': '<span class="badge bg-secondary">Civil</span>',
+            'general': '<span class="badge bg-success">General</span>'
+        };
+        
+        teams.forEach(team => {
+            const memberCount = team.member_ids ? team.member_ids.length : 0;
+            const activeStatus = team.active ? 
+                '<span class="badge bg-success">Active</span>' : 
+                '<span class="badge bg-secondary">Inactive</span>';
+            
+            tbody.append(`
+                <tr>
+                    <td><strong>${team.name}</strong></td>
+                    <td><code>${team.code}</code></td>
+                    <td>${specializationLabels[team.specialization] || team.specialization}</td>
+                    <td>${team.team_leader_name || 'Not Assigned'}</td>
+                    <td>
+                        ${team.email ? `<div><i class="fas fa-envelope"></i> ${team.email}</div>` : ''}
+                        ${team.phone ? `<div><i class="fas fa-phone"></i> ${team.phone}</div>` : ''}
+                    </td>
+                    <td><span class="badge bg-light text-dark">${memberCount} members</span></td>
+                    <td>${activeStatus}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editTeam('${team.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteTeam('${team.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `);
+        });
+    }
+    
+    function createTeam() {
+        $('#teamForm')[0].reset();
+        $('#teamModal').modal('show');
+    }
+    
+    function editTeam(id) {
+        const team = teams.find(t => t.id === id);
+        if (!team) return;
+        
+        $('#teamName').val(team.name);
+        $('#teamCode').val(team.code);
+        $('#teamSpecialization').val(team.specialization);
+        $('#teamLeaderName').val(team.team_leader_name || '');
+        $('#teamEmail').val(team.email || '');
+        $('#teamPhone').val(team.phone || '');
+        $('#teamDescription').val(team.description || '');
+        $('#teamActive').prop('checked', team.active);
+        
+        $('#teamModal').data('edit-id', id).modal('show');
+    }
+    
+    function saveTeam() {
+        const formData = {
+            name: $('#teamName').val(),
+            code: $('#teamCode').val(),
+            specialization: $('#teamSpecialization').val(),
+            team_leader_name: $('#teamLeaderName').val(),
+            email: $('#teamEmail').val(),
+            phone: $('#teamPhone').val(),
+            description: $('#teamDescription').val(),
+            active: $('#teamActive').is(':checked')
+        };
+        
+        // Basic validation
+        if (!formData.name || !formData.code || !formData.specialization) {
+            showToast('Please fill all required fields', 'error');
+            return;
+        }
+        
+        const editId = $('#teamModal').data('edit-id');
+        const method = editId ? 'PUT' : 'POST';
+        const url = editId ? `/api/teams/${editId}` : '/api/teams';
+        
+        $.ajax({
+            url: url,
+            method: method,
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                if (response.success) {
+                    showToast('Team saved successfully', 'success');
+                    $('#teamModal').modal('hide');
+                    loadTeams();
+                }
+            },
+            error: function() {
+                showToast('Error saving team', 'error');
+            }
+        });
+    }
+    
+    function deleteTeam(id) {
+        if (!confirm('Delete this team? This action cannot be undone.')) return;
+        
+        $.ajax({
+            url: `/api/teams/${id}`,
+            method: 'DELETE',
+            success: function(response) {
+                if (response.success) {
+                    showToast('Team deleted successfully', 'success');
+                    loadTeams();
+                }
+            },
+            error: function() {
+                showToast('Error deleting team', 'error');
+            }
+        });
+    }
+    
+    function showToast(message, type) {
+        // Simple toast implementation
+        const toast = $(`
+            <div class="alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} 
+                         position-fixed top-0 end-0 m-3" style="z-index: 9999;">
+                ${message}
+            </div>
+        `);
+        $('body').append(toast);
+        setTimeout(() => toast.fadeOut(() => toast.remove()), 3000);
+    }
+</script>
+{% endblock %}

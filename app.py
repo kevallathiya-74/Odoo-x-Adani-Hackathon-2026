@@ -285,6 +285,56 @@ def create_team():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 400
 
+@app.route('/api/teams/<team_id>', methods=['PUT'])
+def update_team(team_id):
+    """API: Update team"""
+    try:
+        data = request.get_json()
+        team = MaintenanceTeam.browse([team_id])
+        
+        if not team:
+            return jsonify({'success': False, 'error': 'Team not found'}), 404
+        
+        team.write(data)
+        
+        return jsonify({
+            'success': True,
+            'data': team.read(),
+            'message': 'Team updated successfully'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/teams/<team_id>', methods=['DELETE'])
+def delete_team(team_id):
+    """API: Delete team"""
+    try:
+        team = MaintenanceTeam.browse([team_id])
+        
+        if not team:
+            return jsonify({'success': False, 'error': 'Team not found'}), 404
+        
+        # Check if team has active maintenance requests
+        active_requests = MaintenanceRequest.search_count([
+            ('team_id', '=', team_id),
+            ('state', 'in', ['new', 'in_progress'])
+        ])
+        
+        if active_requests > 0:
+            return jsonify({
+                'success': False, 
+                'error': f'Cannot delete team with {active_requests} active maintenance requests'
+            }), 400
+        
+        team.unlink()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Team deleted successfully'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
 # ============================================================================
 # MAINTENANCE REQUEST ROUTES
 # ============================================================================
@@ -398,13 +448,18 @@ def get_maintenance_kanban():
 
 @app.route('/api/maintenance/calendar', methods=['GET'])
 def get_maintenance_calendar():
-    """API: Get maintenance requests for calendar view (preventive only)"""
+    """API: Get maintenance requests for calendar view (all types)"""
     try:
         start_date = request.args.get('start')
         end_date = request.args.get('end')
+        maintenance_type = request.args.get('type')  # New: support type filtering
         
-        # Build domain for preventive maintenance
-        domain = [('maintenance_type', '=', 'preventive')]
+        # Build domain - support all types by default
+        domain = []
+        
+        # Optional type filter
+        if maintenance_type and maintenance_type in ['corrective', 'preventive']:
+            domain.append(('maintenance_type', '=', maintenance_type))
         
         if start_date:
             domain.append(('schedule_date', '>=', start_date))
@@ -417,14 +472,35 @@ def get_maintenance_calendar():
         events = []
         for req in requests:
             data = req.read()
+            
+            # Determine event color based on type and state
+            if data['state'] == 'done':
+                color = '#6c757d'  # gray - completed
+            elif data.get('is_overdue'):
+                color = '#dc3545'  # red - overdue
+            elif data['maintenance_type'] == 'preventive':
+                color = '#28a745'  # green - preventive
+            else:
+                color = '#ffc107'  # yellow - corrective
+            
             events.append({
                 'id': data['id'],
                 'title': f"{data['equipment_name']} - {data['name']}",
                 'start': data['schedule_date'],
-                'description': data.get('description', ''),
-                'technician': data.get('technician_name', ''),
-                'state': data['state'],
-                'priority': data.get('priority', '1')
+                'backgroundColor': color,
+                'borderColor': color,
+                'extendedProps': {
+                    'id': data['id'],
+                    'maintenance_type': data['maintenance_type'],
+                    'equipment': data.get('equipment_name', 'N/A'),
+                    'location': data.get('equipment_location', 'N/A'),
+                    'description': data.get('description', ''),
+                    'technician': data.get('technician_name', 'Unassigned'),
+                    'team': data.get('team_name', 'N/A'),
+                    'state': data['state'],
+                    'priority': data.get('priority', '1'),
+                    'duration': data.get('duration', 0)
+                }
             })
         
         return jsonify({
@@ -612,6 +688,18 @@ def get_chart_data():
             if count > 0:
                 equipment_by_category[cat] = count
         
+        # Team workload - count maintenance requests per team
+        teams = MaintenanceTeam.search([('active', '=', True)])
+        team_workload = {}
+        for team in teams:
+            team_data = team.read()
+            active_count = MaintenanceRequest.search_count([
+                ('team_id', '=', team_data['id']),
+                ('state', 'in', ['new', 'in_progress'])
+            ])
+            if active_count > 0:
+                team_workload[team_data['name']] = active_count
+        
         return jsonify({
             'success': True,
             'data': {
@@ -625,7 +713,12 @@ def get_chart_data():
                     'done': done,
                     'cancelled': cancelled
                 },
-                'equipment_by_category': equipment_by_category
+                'equipment_by_category': equipment_by_category,
+                'team_workload': team_workload,
+                'teams': {
+                    'total': len(teams),
+                    'workload': team_workload
+                }
             }
         })
     except Exception as e:
