@@ -122,6 +122,9 @@
     });
     
     function loadTeams() {
+        // Show loading spinner
+        $('#teamTableBody').html('<tr><td colspan="8" class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></td></tr>');
+        
         $.ajax({
             url: '/api/teams',
             method: 'GET',
@@ -129,6 +132,8 @@
                 if (response.success) {
                     teams = response.data;
                     renderTeams();
+                } else {
+                    $('#teamTableBody').html('<tr><td colspan="8" class="text-center text-danger">Failed to load teams</td></tr>');
                 }
             },
             error: function() {

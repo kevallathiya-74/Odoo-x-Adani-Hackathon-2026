@@ -694,6 +694,7 @@ def get_pivot_data():
         for req in requests:
             data = req.read()
             pivot_data.append({
+                'name': data.get('name', ''),
                 'equipment_name': data.get('equipment_name', ''),
                 'equipment_category': data.get('equipment_category', ''),
                 'team_name': data.get('team_name', ''),
