@@ -240,8 +240,8 @@
         loadPivotData();
         loadTopEquipment();
         
-        // Pivot controls
-        $('#groupByField, #measureField, #pivotStateFilter').on('change', refreshPivot);
+        // Pivot controls - rerender on filter change
+        $('#groupByField, #measureField, #pivotStateFilter').on('change', renderPivotTable);
     });
     
     function loadDashboardStats() {
@@ -385,13 +385,33 @@
             success: function(response) {
                 if (response.success) {
                     pivotData = response.data;
-                    refreshPivot();
+                    renderPivotTable();
                 }
             }
         });
     }
     
     function refreshPivot() {
+        // Show loading
+        $('#pivotTableBody').html('<tr><td colspan="3" class="text-center"><div class="spinner-border text-primary" role="status"></div></td></tr>');
+        
+        // Reload data from API
+        $.ajax({
+            url: '/api/reports/pivot',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    pivotData = response.data;
+                    renderPivotTable();
+                }
+            },
+            error: function() {
+                $('#pivotTableBody').html('<tr><td colspan="3" class="text-center text-danger">Failed to load data</td></tr>');
+            }
+        });
+    }
+    
+    function renderPivotTable() {
         const groupBy = $('#groupByField').val();
         const measure = $('#measureField').val();
         const stateFilter = $('#pivotStateFilter').val();

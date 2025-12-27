@@ -170,6 +170,21 @@
     const recordsPerPage = 20;
     
     $(document).ready(function() {
+        // Read URL parameters and set filters
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('state')) {
+            $('#stateFilter').val(urlParams.get('state'));
+        }
+        if (urlParams.has('is_overdue')) {
+            $('#overdueFilter').val(urlParams.get('is_overdue'));
+        }
+        if (urlParams.has('maintenance_type')) {
+            $('#typeFilter').val(urlParams.get('maintenance_type'));
+        }
+        if (urlParams.has('priority')) {
+            $('#priorityFilter').val(urlParams.get('priority'));
+        }
+        
         loadRequests();
         
         // Filter change handlers

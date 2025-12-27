@@ -72,8 +72,10 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">Maintenance Team Name *</label>
-                        <input type="text" class="form-control" id="maintenance_team_name" required>
+                        <label class="form-label">Maintenance Team *</label>
+                        <select class="form-select" id="maintenance_team_id" required>
+                            <option value="">Select Team</option>
+                        </select>
                     </div>
                     
                     <div class="mb-3">
@@ -180,13 +182,35 @@
 <script>
     const equipmentId = '{{ equipment_id }}';
     let isEditMode = equipmentId && equipmentId !== 'None';
+    let teamsList = [];
     
     $(document).ready(function() {
+        loadTeams();
+        
         if (isEditMode) {
             $('#formTitle').text('Edit Equipment');
             loadEquipment();
         }
     });
+    
+    function loadTeams() {
+        $.ajax({
+            url: '/api/teams',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    teamsList = response.data;
+                    const select = $('#maintenance_team_id');
+                    select.empty().append('<option value="">Select Team</option>');
+                    response.data.forEach(team => {
+                        if (team.active) {
+                            select.append(`<option value="${team.id}">${team.name}</option>`);
+                        }
+                    });
+                }
+            }
+        });
+    }
     
     function loadEquipment() {
         $.ajax({
@@ -218,6 +242,14 @@
     $('#equipmentForm').on('submit', function(e) {
         e.preventDefault();
         
+        const teamId = $('#maintenance_team_id').val();
+        if (!teamId) {
+            showToast('Please select a maintenance team', 'error');
+            return;
+        }
+        
+        const team = teamsList.find(t => t.id == teamId);
+        
         // Collect form data
         const formData = {
             name: $('#name').val(),
@@ -228,7 +260,8 @@
             department_name: $('#department_name').val(),
             responsible_name: $('#responsible_name').val(),
             location: $('#location').val(),
-            maintenance_team_name: $('#maintenance_team_name').val(),
+            maintenance_team_id: teamId,
+            maintenance_team_name: team ? team.name : '',
             technician_name: $('#technician_name').val(),
             cost: parseFloat($('#cost').val()) || 0,
             purchase_date: $('#purchase_date').val(),

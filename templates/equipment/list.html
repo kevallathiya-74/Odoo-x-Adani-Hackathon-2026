@@ -100,6 +100,15 @@
     const itemsPerPage = 20;
     
     $(document).ready(function() {
+        // Read URL parameters and set filters
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('state')) {
+            $('#filterState').val(urlParams.get('state'));
+        }
+        if (urlParams.has('category')) {
+            $('#filterCategory').val(urlParams.get('category'));
+        }
+        
         loadEquipment();
         
         // Debounced search
