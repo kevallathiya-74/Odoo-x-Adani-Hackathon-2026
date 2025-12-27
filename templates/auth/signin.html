@@ -1,0 +1,208 @@
+{% extends "auth/base_auth.html" %}
+
+{% block title %}Sign In - GearGuard{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <!-- Brand and Welcome Header -->
+    <div class="auth-brand">
+        <div class="brand-icon">
+            <i class="fas fa-shield-alt"></i>
+        </div>
+        <h1>Welcome to GearGuard</h1>
+        <p>Centralized maintenance tracking for equipment, teams, and requests.</p>
+    </div>
+    
+    <!-- Sign In Form -->
+    <form class="auth-form" id="signInForm" novalidate>
+        <!-- Email/Username Field -->
+        <div class="form-group">
+            <label for="email">Email / Username</label>
+            <input 
+                type="text" 
+                id="email" 
+                name="email" 
+                class="form-control" 
+                placeholder="Enter your email or username"
+                autocomplete="email"
+                required
+                aria-describedby="emailError"
+            >
+            <div id="emailError" class="error-message" role="alert">
+                Please enter a valid email or username
+            </div>
+        </div>
+        
+        <!-- Password Field -->
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input 
+                type="password" 
+                id="password" 
+                name="password" 
+                class="form-control" 
+                placeholder="Enter your password"
+                autocomplete="current-password"
+                required
+                aria-describedby="passwordError"
+            >
+            <div id="passwordError" class="error-message" role="alert">
+                Password is required
+            </div>
+        </div>
+        
+        <!-- Primary Action Button -->
+        <button type="submit" class="btn-primary-auth" id="signInButton">
+            <span class="spinner"></span>
+            Sign In
+        </button>
+    </form>
+    
+    <!-- Secondary Action - Create Account Link -->
+    <div class="auth-footer">
+        <p>Don't have an account?</p>
+        <a href="/auth/signup">Create an account</a>
+        <div style="margin-top: 12px;">
+            <a href="/auth/forgot-password" style="font-size: 13px; color: #6c757d;">Forgot Password?</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    /**
+     * Sign In Form Validation and Submission
+     * Follows Odoo UX principles: inline errors, no alerts, keyboard accessible
+     */
+    (function() {
+        const form = document.getElementById('signInForm');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const emailError = document.getElementById('emailError');
+        const passwordError = document.getElementById('passwordError');
+        const submitButton = document.getElementById('signInButton');
+        
+        // Validation functions
+        function validateEmail(email) {
+            // Accept both email format and username (alphanumeric + underscore)
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const usernameRegex = /^[a-zA-Z0-9_]{3,}$/;
+            return emailRegex.test(email) || usernameRegex.test(email);
+        }
+        
+        function validatePassword(password) {
+            return password.length > 0;
+        }
+        
+        // Real-time validation on blur
+        emailInput.addEventListener('blur', function() {
+            if (!this.value.trim()) {
+                showError(emailInput, emailError, 'Email or username is required');
+            } else if (!validateEmail(this.value.trim())) {
+                showError(emailInput, emailError, 'Please enter a valid email or username');
+            } else {
+                clearError(emailInput, emailError);
+            }
+        });
+        
+        passwordInput.addEventListener('blur', function() {
+            if (!validatePassword(this.value)) {
+                showError(passwordInput, passwordError, 'Password is required');
+            } else {
+                clearError(passwordInput, passwordError);
+            }
+        });
+        
+        // Clear error on input
+        emailInput.addEventListener('input', function() {
+            if (this.value.trim()) {
+                clearError(emailInput, emailError);
+            }
+        });
+        
+        passwordInput.addEventListener('input', function() {
+            if (this.value) {
+                clearError(passwordInput, passwordError);
+            }
+        });
+        
+        // Form submission
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            
+            let isValid = true;
+            
+            // Validate email
+            if (!email) {
+                showError(emailInput, emailError, 'Email or username is required');
+                isValid = false;
+            } else if (!validateEmail(email)) {
+                showError(emailInput, emailError, 'Please enter a valid email or username');
+                isValid = false;
+            }
+            
+            // Validate password
+            if (!validatePassword(password)) {
+                showError(passwordInput, passwordError, 'Password is required');
+                isValid = false;
+            }
+            
+            if (!isValid) {
+                return;
+            }
+            
+            // Show loading state
+            submitButton.classList.add('loading');
+            submitButton.disabled = true;
+            
+            // Submit to backend
+            $.ajax({
+                url: '/api/auth/signin',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ email, password }),
+                success: function(response) {
+                    if (response.success) {
+                        // Redirect to dashboard
+                        window.location.href = '/';
+                    } else {
+                        // Show error
+                        showError(emailInput, emailError, response.error || 'Invalid credentials');
+                        submitButton.classList.remove('loading');
+                        submitButton.disabled = false;
+                    }
+                },
+                error: function(xhr) {
+                    const error = xhr.responseJSON?.error || 'An error occurred. Please try again.';
+                    showError(emailInput, emailError, error);
+                    submitButton.classList.remove('loading');
+                    submitButton.disabled = false;
+                }
+            });
+        });
+        
+        // Helper functions for error display
+        function showError(input, errorElement, message) {
+            input.classList.add('is-invalid');
+            errorElement.textContent = message;
+            errorElement.classList.add('show');
+        }
+        
+        function clearError(input, errorElement) {
+            input.classList.remove('is-invalid');
+            errorElement.classList.remove('show');
+        }
+        
+        // Keyboard accessibility - Enter key on inputs
+        emailInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                passwordInput.focus();
+            }
+        });
+    })();
+</script>
+{% endblock %}

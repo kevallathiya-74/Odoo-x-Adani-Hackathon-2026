@@ -75,10 +75,24 @@
                             <span class="badge bg-danger" id="notificationCount">0</span>
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            <i class="fas fa-user-circle"></i> Admin
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle"></i> 
+                            {% if current_user.is_authenticated %}{{ current_user.name }}{% else %}Admin{% endif %}
                         </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            {% if current_user.is_authenticated %}
+                            <li><h6 class="dropdown-header">{{ current_user.email }}</h6></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/logout">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </a></li>
+                            {% else %}
+                            <li><a class="dropdown-item" href="/auth/signin">
+                                <i class="fas fa-sign-in-alt"></i> Sign In
+                            </a></li>
+                            {% endif %}
+                        </ul>
                     </li>
                 </ul>
             </div>

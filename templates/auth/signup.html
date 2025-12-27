@@ -1,0 +1,316 @@
+{% extends "auth/base_auth.html" %}
+
+{% block title %}Sign Up - GearGuard{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <!-- Brand and Title -->
+    <div class="auth-brand">
+        <div class="brand-icon">
+            <i class="fas fa-user-plus"></i>
+        </div>
+        <h1>Create your GearGuard Account</h1>
+        <p>Start managing equipment maintenance with clarity and control.</p>
+    </div>
+    
+    <!-- Sign Up Form -->
+    <form class="auth-form" id="signUpForm" novalidate>
+        <!-- Full Name Field -->
+        <div class="form-group">
+            <label for="fullName">Full Name</label>
+            <input 
+                type="text" 
+                id="fullName" 
+                name="fullName" 
+                class="form-control" 
+                placeholder="Enter your full name"
+                autocomplete="name"
+                required
+                aria-describedby="nameError"
+            >
+            <div id="nameError" class="error-message" role="alert">
+                Full name is required
+            </div>
+        </div>
+        
+        <!-- Work Email Field -->
+        <div class="form-group">
+            <label for="email">Work Email</label>
+            <input 
+                type="email" 
+                id="email" 
+                name="email" 
+                class="form-control" 
+                placeholder="your.email@company.com"
+                autocomplete="email"
+                required
+                aria-describedby="emailError"
+            >
+            <div id="emailError" class="error-message" role="alert">
+                Please enter a valid work email
+            </div>
+        </div>
+        
+        <!-- Password Field -->
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input 
+                type="password" 
+                id="password" 
+                name="password" 
+                class="form-control" 
+                placeholder="Create a password (min. 8 characters)"
+                autocomplete="new-password"
+                required
+                aria-describedby="passwordError"
+            >
+            <div id="passwordError" class="error-message" role="alert">
+                Password must be at least 8 characters
+            </div>
+        </div>
+        
+        <!-- Confirm Password Field -->
+        <div class="form-group">
+            <label for="confirmPassword">Confirm Password</label>
+            <input 
+                type="password" 
+                id="confirmPassword" 
+                name="confirmPassword" 
+                class="form-control" 
+                placeholder="Re-enter your password"
+                autocomplete="new-password"
+                required
+                aria-describedby="confirmPasswordError"
+            >
+            <div id="confirmPasswordError" class="error-message" role="alert">
+                Passwords do not match
+            </div>
+        </div>
+        
+        <!-- Primary Action Button -->
+        <button type="submit" class="btn-primary-auth" id="signUpButton">
+            <span class="spinner"></span>
+            Create Account
+        </button>
+    </form>
+    
+    <!-- Business Rules Information -->
+    <div class="auth-info">
+        <p><i class="fas fa-info-circle"></i> Use your official company email</p>
+        <p><i class="fas fa-lock"></i> Password must be at least 8 characters</p>
+        <p><i class="fas fa-key"></i> Must contain uppercase, lowercase, and special character</p>
+        <p><i class="fas fa-building"></i> One account per organization</p>
+    </div>
+    
+    <!-- Secondary Action - Sign In Link -->
+    <div class="auth-footer">
+        <p>Already have an account?</p>
+        <a href="/auth/signin">Sign In</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    /**
+     * Sign Up Form Validation and Submission
+     * Implements Odoo's enterprise-grade validation standards
+     */
+    (function() {
+        const form = document.getElementById('signUpForm');
+        const nameInput = document.getElementById('fullName');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const nameError = document.getElementById('nameError');
+        const emailError = document.getElementById('emailError');
+        const passwordError = document.getElementById('passwordError');
+        const confirmPasswordError = document.getElementById('confirmPasswordError');
+        const submitButton = document.getElementById('signUpButton');
+        
+        // Validation functions
+        function validateName(name) {
+            return name.length >= 2;
+        }
+        
+        function validateEmail(email) {
+            // Strict email validation for work emails
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            return emailRegex.test(email);
+        }
+        
+        function validatePassword(password) {
+            return password.length >= 8;
+        }
+        
+        function validatePasswordMatch(password, confirmPassword) {
+            return password === confirmPassword && password.length > 0;
+        }
+        
+        // Real-time validation on blur
+        nameInput.addEventListener('blur', function() {
+            const name = this.value.trim();
+            if (!name) {
+                showError(nameInput, nameError, 'Full name is required');
+            } else if (!validateName(name)) {
+                showError(nameInput, nameError, 'Please enter your full name');
+            } else {
+                clearError(nameInput, nameError);
+            }
+        });
+        
+        emailInput.addEventListener('blur', function() {
+            const email = this.value.trim();
+            if (!email) {
+                showError(emailInput, emailError, 'Work email is required');
+            } else if (!validateEmail(email)) {
+                showError(emailInput, emailError, 'Please enter a valid work email');
+            } else {
+                clearError(emailInput, emailError);
+            }
+        });
+        
+        passwordInput.addEventListener('blur', function() {
+            const password = this.value;
+            if (!password) {
+                showError(passwordInput, passwordError, 'Password is required');
+            } else if (!validatePassword(password)) {
+                showError(passwordInput, passwordError, 'Password must be at least 8 characters');
+            } else {
+                clearError(passwordInput, passwordError);
+                
+                // Revalidate confirm password if it has value
+                if (confirmPasswordInput.value) {
+                    validateConfirmPasswordField();
+                }
+            }
+        });
+        
+        confirmPasswordInput.addEventListener('blur', validateConfirmPasswordField);
+        
+        function validateConfirmPasswordField() {
+            const password = passwordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
+            
+            if (!confirmPassword) {
+                showError(confirmPasswordInput, confirmPasswordError, 'Please confirm your password');
+            } else if (!validatePasswordMatch(password, confirmPassword)) {
+                showError(confirmPasswordInput, confirmPasswordError, 'Passwords do not match');
+            } else {
+                clearError(confirmPasswordInput, confirmPasswordError);
+            }
+        }
+        
+        // Clear errors on input
+        nameInput.addEventListener('input', function() {
+            if (this.value.trim()) clearError(nameInput, nameError);
+        });
+        
+        emailInput.addEventListener('input', function() {
+            if (this.value.trim()) clearError(emailInput, emailError);
+        });
+        
+        passwordInput.addEventListener('input', function() {
+            if (this.value) clearError(passwordInput, passwordError);
+        });
+        
+        confirmPasswordInput.addEventListener('input', function() {
+            if (this.value) clearError(confirmPasswordInput, confirmPasswordError);
+        });
+        
+        // Form submission
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = nameInput.value.trim();
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
+            
+            let isValid = true;
+            
+            // Validate all fields
+            if (!name) {
+                showError(nameInput, nameError, 'Full name is required');
+                isValid = false;
+            } else if (!validateName(name)) {
+                showError(nameInput, nameError, 'Please enter your full name');
+                isValid = false;
+            }
+            
+            if (!email) {
+                showError(emailInput, emailError, 'Work email is required');
+                isValid = false;
+            } else if (!validateEmail(email)) {
+                showError(emailInput, emailError, 'Please enter a valid work email');
+                isValid = false;
+            }
+            
+            if (!password) {
+                showError(passwordInput, passwordError, 'Password is required');
+                isValid = false;
+            } else if (!validatePassword(password)) {
+                showError(passwordInput, passwordError, 'Password must be at least 8 characters');
+                isValid = false;
+            }
+            
+            if (!confirmPassword) {
+                showError(confirmPasswordInput, confirmPasswordError, 'Please confirm your password');
+                isValid = false;
+            } else if (!validatePasswordMatch(password, confirmPassword)) {
+                showError(confirmPasswordInput, confirmPasswordError, 'Passwords do not match');
+                isValid = false;
+            }
+            
+            if (!isValid) {
+                return;
+            }
+            
+            // Show loading state
+            submitButton.classList.add('loading');
+            submitButton.disabled = true;
+            
+            // Submit to backend
+            $.ajax({
+                url: '/api/auth/signup',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ 
+                    name: name,
+                    email: email, 
+                    password: password 
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        // Redirect to sign in or dashboard
+                        window.location.href = response.redirect || '/auth/signin';
+                    } else {
+                        // Show error
+                        showError(emailInput, emailError, response.error || 'Account creation failed');
+                        submitButton.classList.remove('loading');
+                        submitButton.disabled = false;
+                    }
+                },
+                error: function(xhr) {
+                    const error = xhr.responseJSON?.error || 'An error occurred. Please try again.';
+                    showError(emailInput, emailError, error);
+                    submitButton.classList.remove('loading');
+                    submitButton.disabled = false;
+                }
+            });
+        });
+        
+        // Helper functions for error display
+        function showError(input, errorElement, message) {
+            input.classList.add('is-invalid');
+            errorElement.textContent = message;
+            errorElement.classList.add('show');
+        }
+        
+        function clearError(input, errorElement) {
+            input.classList.remove('is-invalid');
+            errorElement.classList.remove('show');
+        }
+    })();
+</script>
+{% endblock %}

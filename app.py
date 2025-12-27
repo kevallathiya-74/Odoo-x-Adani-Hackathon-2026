@@ -2,8 +2,9 @@
 Flask Application for Maintenance Management System
 Implements Odoo-style MVC architecture with MongoDB backend
 """
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_cors import CORS
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from datetime import datetime, timedelta
 import sys
 import os
@@ -13,17 +14,63 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import Config
 from core import init_db, get_db
-from addons.maintenance_management.models import Equipment, MaintenanceTeam, MaintenanceRequest
+from addons.maintenance_management.models import Equipment, MaintenanceTeam, MaintenanceRequest, PortalUser
 
 app = Flask(__name__)
 app.config.from_object(Config)
+app.secret_key = Config.SECRET_KEY  # Required for Flask-Login sessions
 CORS(app)
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'auth_signin'  # Redirect to sign in page
+login_manager.login_message = None  # Disable flash messages (non-Odoo style)
+
+# User class for Flask-Login
+class User(UserMixin):
+    """User session object"""
+    def __init__(self, user_data):
+        self.id = user_data['id']
+        self.name = user_data['name']
+        self.email = user_data['email']
+        self.is_admin = user_data.get('is_admin', False)
+
+# User loader callback for Flask-Login
+@login_manager.user_loader
+def load_user(user_id):
+    """Load user from database by ID"""
+    try:
+        users = PortalUser.browse([user_id])
+        if users:
+            user_data = users[0].read()
+            return User(user_data)
+        return None
+    except:
+        return None
 
 # Initialize database
 @app.before_request
 def before_request():
-    """Initialize database connection"""
+    """Initialize database connection and enforce authentication"""
     init_db()
+    
+    # List of public routes that don't require authentication
+    public_routes = [
+        'auth_signin',
+        'auth_signup',
+        'auth_forgot_password',
+        'api_signin',
+        'api_signup',
+        'api_forgot_password',
+        'static'
+    ]
+    
+    # Check if current endpoint requires authentication
+    if request.endpoint and request.endpoint not in public_routes:
+        if not current_user.is_authenticated:
+            # Redirect to login page for unauthenticated users
+            return redirect(url_for('auth_signin'))
 
 # ============================================================================
 # DASHBOARD & HOME
@@ -723,6 +770,179 @@ def get_chart_data():
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# ============================================================================
+# AUTHENTICATION ROUTES
+# ============================================================================
+
+@app.route('/auth/signin')
+def auth_signin():
+    """Sign In page"""
+    return render_template('auth/signin.html')
+
+@app.route('/auth/signup')
+def auth_signup():
+    """Sign Up page"""
+    return render_template('auth/signup.html')
+
+@app.route('/auth/forgot-password')
+def auth_forgot_password():
+    """Forgot Password page"""
+    return render_template('auth/forgot_password.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    """Logout and clear session"""
+    logout_user()
+    session.clear()
+    return redirect(url_for('auth_signin'))
+
+@app.route('/api/auth/signin', methods=['POST'])
+def api_signin():
+    """API: Sign In authentication with MongoDB validation"""
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip()
+        password = data.get('password', '')
+        
+        # Validate required fields
+        if not email or not password:
+            return jsonify({
+                'success': False,
+                'error': 'Email and password are required'
+            }), 400
+        
+        # Authenticate user
+        success, user, error = PortalUser.authenticate(email, password)
+        
+        if not success:
+            return jsonify({
+                'success': False,
+                'error': error
+            }), 401
+        
+        # Successful login - Create session with Flask-Login
+        user_data = user.read()
+        user_obj = User(user_data)
+        login_user(user_obj, remember=False)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Sign in successful',
+            'user': {
+                'id': user_data['id'],
+                'name': user_data['name'],
+                'email': user_data['email']
+            },
+            'redirect': '/'
+        })
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/auth/signup', methods=['POST'])
+def api_signup():
+    """API: Sign Up - Create new portal user with validation"""
+    try:
+        data = request.get_json()
+        name = data.get('name', '').strip()
+        email = data.get('email', '').strip()
+        password = data.get('password', '')
+        
+        # Validate required fields
+        if not name or not email or not password:
+            return jsonify({
+                'success': False,
+                'error': 'All fields are required'
+            }), 400
+        
+        # Validate email format
+        import re
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, email):
+            return jsonify({
+                'success': False,
+                'error': 'Invalid email format'
+            }), 400
+        
+        # Check if email already exists (duplicate prevention)
+        if PortalUser.email_exists(email):
+            return jsonify({
+                'success': False,
+                'error': 'Email Id should not be a duplicate in database'
+            }), 400
+        
+        # Validate password strength
+        valid, error_msg = PortalUser.validate_password_strength(password)
+        if not valid:
+            return jsonify({
+                'success': False,
+                'error': error_msg
+            }), 400
+        
+        # Create portal user in MongoDB
+        user = PortalUser.create({
+            'name': name,
+            'email': email,
+            'password': password,  # Will be hashed in create method
+            'active': True
+        })
+        
+        # Auto-login after successful registration
+        user_data = user.read()
+        user_obj = User(user_data)
+        login_user(user_obj, remember=False)
+        
+        # Success - redirect to dashboard
+        return jsonify({
+            'success': True,
+            'message': 'Account created successfully',
+            'redirect': '/'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/auth/forgot-password', methods=['POST'])
+def api_forgot_password():
+    """API: Forgot Password - Send reset link"""
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip()
+        
+        if not email:
+            return jsonify({
+                'success': False,
+                'error': 'Email is required'
+            }), 400
+        
+        # Check if user exists (but don't reveal this to prevent email enumeration)
+        user_exists = PortalUser.email_exists(email)
+        
+        # TODO: In production, implement:
+        # 1. Generate secure reset token
+        # 2. Store token with expiration in database
+        # 3. Send email with reset link
+        # 4. Implement reset password page
+        
+        # Always return success for security (prevent email enumeration)
+        return jsonify({
+            'success': True,
+            'message': 'If an account exists, a reset link has been sent'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 # ============================================================================
 # UTILITY ROUTES
