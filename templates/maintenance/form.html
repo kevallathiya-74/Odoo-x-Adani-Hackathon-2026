@@ -239,15 +239,21 @@
     
     function populateForm(data) {
         $('#requestName').val(data.name);
-        $('#equipment').val(data.equipment_id);
         $('#description').val(data.description || '');
         $('#maintenanceType').val(data.maintenance_type);
         $('#priority').val(data.priority);
         $('#scheduleDate').val(data.schedule_date ? data.schedule_date.split(' ')[0] : '');
         $('#duration').val(data.duration || '');
-        $('#team').val(data.team_id);
         $('#technician').val(data.technician_name || '');
         $('#notes').val(data.notes || '');
+        
+        // Set equipment and team values (dropdowns should already be populated)
+        if (data.equipment_id) {
+            $('#equipment').val(data.equipment_id);
+        }
+        if (data.team_id) {
+            $('#team').val(data.team_id);
+        }
         
         // Update status info
         const stateLabels = {
@@ -294,11 +300,28 @@
                     <i class="fas fa-ban"></i> Cancel
                 </button>
             `);
+        } else if (state === 'done') {
+            actions.append(`
+                <div class="alert alert-success mb-0">
+                    <i class="fas fa-check-circle"></i> This request has been completed.
+                </div>
+            `);
+        } else if (state === 'cancelled') {
+            actions.append(`
+                <div class="alert alert-secondary mb-0">
+                    <i class="fas fa-ban"></i> This request has been cancelled.
+                </div>
+            `);
         }
     }
     
     function changeState(newState) {
-        if (!requestId) return;
+        if (!requestId) {
+            console.error('No requestId available');
+            return;
+        }
+        
+        console.log('Changing state to:', newState, 'for request:', requestId);
         
         const confirmMsg = newState === 'done' 
             ? 'Mark this request as completed?' 
@@ -307,19 +330,26 @@
             : 'Start working on this request?';
         
         confirmAction(confirmMsg, function() {
+            console.log('User confirmed, sending API request...');
             $.ajax({
                 url: `/api/maintenance/${requestId}/state`,
                 method: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({ state: newState }),
                 success: function(response) {
+                    console.log('API response:', response);
                     if (response.success) {
                         showToast(response.message || 'State updated', 'success');
-                        loadRequest(); // Reload to update UI
+                        // Reload to update UI with new state
+                        loadRequest();
+                    } else {
+                        showToast(response.error || 'Failed to update state', 'error');
                     }
                 },
-                error: function() {
-                    showToast('Failed to update state', 'error');
+                error: function(xhr) {
+                    console.error('API error:', xhr);
+                    const errorMsg = xhr.responseJSON?.error || 'Failed to update state';
+                    showToast(errorMsg, 'error');
                 }
             });
         });

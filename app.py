@@ -81,6 +81,18 @@ def index():
     """Main dashboard"""
     return render_template('dashboard.html')
 
+@app.route('/favicon.ico')
+def favicon():
+    """Serve favicon or return 204 No Content to prevent console errors"""
+    # Return 204 No Content - tells browser there's no favicon without error
+    return '', 204
+
+@app.route('/.well-known/appspecific/com.chrome.devtools.json')
+def chrome_devtools():
+    """Handle Chrome DevTools well-known request"""
+    # Return 204 No Content to prevent 404 errors when DevTools is open
+    return '', 204
+
 @app.route('/api/dashboard/stats')
 def dashboard_stats():
     """Get dashboard statistics"""
@@ -695,6 +707,60 @@ def complete_maintenance(request_id):
             'message': 'Maintenance completed'
         })
     except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/api/maintenance/<request_id>/state', methods=['POST'])
+def change_maintenance_state(request_id):
+    """API: Change maintenance request state (universal state transition endpoint)"""
+    try:
+        print(f"[STATE CHANGE] Request ID: {request_id}")
+        requests = MaintenanceRequest.browse([request_id])
+        if not requests:
+            return jsonify({'success': False, 'error': 'Request not found'}), 404
+        
+        data = request.get_json()
+        new_state = data.get('state')
+        print(f"[STATE CHANGE] New state: {new_state}")
+        
+        if not new_state:
+            return jsonify({'success': False, 'error': 'State is required'}), 400
+        
+        # Validate state
+        valid_states = ['new', 'in_progress', 'done', 'cancelled']
+        if new_state not in valid_states:
+            return jsonify({'success': False, 'error': f'Invalid state. Must be one of: {", ".join(valid_states)}'}), 400
+        
+        maintenance_request = requests[0]
+        print(f"[STATE CHANGE] Current state: {maintenance_request.state}")
+        
+        # Call appropriate action method based on state
+        if new_state == 'in_progress':
+            maintenance_request.action_start()
+            message = 'Maintenance work started'
+        elif new_state == 'done':
+            maintenance_request.action_done()
+            message = 'Maintenance completed'
+        elif new_state == 'cancelled':
+            print("[STATE CHANGE] Calling action_cancel()...")
+            maintenance_request.action_cancel()
+            print("[STATE CHANGE] action_cancel() completed")
+            message = 'Maintenance request cancelled'
+        else:
+            # Direct state change for 'new' or other states
+            maintenance_request.write({'state': new_state})
+            message = f'State changed to {new_state}'
+        
+        print(f"[STATE CHANGE] Success! New state: {maintenance_request.state}")
+        print(f"[STATE CHANGE] Success! New state: {maintenance_request.state}")
+        return jsonify({
+            'success': True,
+            'data': maintenance_request.read(),
+            'message': message
+        })
+    except Exception as e:
+        print(f"[STATE CHANGE ERROR] {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 400
 
 # ============================================================================
